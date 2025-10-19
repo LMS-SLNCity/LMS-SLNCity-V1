@@ -1,0 +1,5 @@
+{
+  "name": "SLNCity Diagnostic Center",
+  "description": "An on-prem Lab system managing visits, tests, results, approvals, billing and B2B ledger.",
+  "requestFramePermissions": []
+}
