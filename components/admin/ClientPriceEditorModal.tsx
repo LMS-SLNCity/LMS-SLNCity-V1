@@ -38,9 +38,9 @@ export const ClientPriceEditorModal: React.FC<ClientPriceEditorModalProps> = ({ 
     setIsSaving(true);
     try {
       const pricesToUpdate = Object.entries(prices)
-        .map(([testId, price]) => ({
+        .map(([testId, price]: [string, unknown]) => ({
           testTemplateId: parseInt(testId),
-          price: parseFloat(price) || 0
+          price: parseFloat(String(price)) || 0
         }))
         .filter(p => p.price > 0);
 
@@ -89,7 +89,7 @@ export const ClientPriceEditorModal: React.FC<ClientPriceEditorModalProps> = ({ 
                   <input
                     type="number"
                     value={prices[test.id]}
-                    onChange={(e) => handlePriceChange(test.id, e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handlePriceChange(test.id, e.target.value)}
                     placeholder={test.b2b_price.toString()}
                     className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
                     disabled={isSaving}
