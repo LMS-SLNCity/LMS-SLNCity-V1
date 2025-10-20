@@ -59,6 +59,8 @@ interface AppContextType extends AppState {
   updateTestPrices: (priceData: { id: number, price: number, b2b_price: number }[], actor: User) => void;
   updateRolePermissions: (role: Role, permissions: Permission[], actor: User) => void;
   // B2B Functions
+  addClient: (clientData: { name: string; type: 'PATIENT' | 'REFERRAL_LAB' | 'INTERNAL' }, actor: User) => void;
+  addReferralDoctor: (doctorData: { name: string }, actor: User) => void;
   updateClientPrices: (clientId: number, prices: { testTemplateId: number, price: number }[], actor: User) => void;
   addClientPayment: (clientId: number, amount: number, description: string, actor: User) => void;
   // Antibiotic Management
@@ -383,7 +385,30 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
     }));
   }
-  
+
+  const addClient = (clientData: { name: string; type: 'PATIENT' | 'REFERRAL_LAB' | 'INTERNAL' }, actor: User) => {
+    addAuditLog(actor.username, 'MANAGE_B2B', `Created new B2B client: ${clientData.name}.`);
+    setState(prevState => {
+        const newClientId = (prevState.clients.length > 0 ? Math.max(...prevState.clients.map(c => c.id)) : 0) + 1;
+        const newClient: Client = {
+            id: newClientId,
+            name: clientData.name,
+            type: clientData.type,
+            balance: 0,
+        };
+        return {
+            ...prevState,
+            clients: [...prevState.clients, newClient]
+        };
+    });
+  };
+
+  const addReferralDoctor = (doctorData: { name: string }, actor: User) => {
+    addAuditLog(actor.username, 'MANAGE_B2B', `Created new referral doctor: ${doctorData.name}.`);
+    // This is a placeholder - the actual implementation will be handled by the backend
+    // The frontend will fetch the updated list from the API
+  };
+
   const updateClientPrices = (clientId: number, pricesToUpdate: { testTemplateId: number, price: number }[], actor: User) => {
     const client = state.clients.find(c => c.id === clientId);
     if (client) {
@@ -467,6 +492,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     deleteTestTemplate,
     updateTestPrices,
     updateRolePermissions,
+    addClient,
+    addReferralDoctor,
     updateClientPrices,
     addClientPayment,
     addAntibiotic,
