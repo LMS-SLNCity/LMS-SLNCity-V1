@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { Patient, Salutation, Sex, Visit, VisitTest } from '../types';
-import { mockReferralDoctors } from '../api/mock';
+import { apiClient } from '../api/client';
 import { Input } from './form/Input';
 import { Select } from './form/Select';
 import { useAppContext } from '../context/AppContext';
@@ -119,8 +119,9 @@ interface CreateVisitFormProps {
 }
 
 export const CreateVisitForm: React.FC<CreateVisitFormProps> = ({ onInitiateReport }) => {
-  const { addVisit, visits, visitTests, collectDuePayment, testTemplates, clients, clientPrices, patients } = useAppContext();
+    const { addVisit, visits, visitTests, collectDuePayment, testTemplates, clients, clientPrices, patients } = useAppContext();
   const { user: actor } = useAuth();
+    const [referralDoctors, setReferralDoctors] = useState<{ id: number; name: string }[]>([]);
   const [formData, setFormData] = useState<FormState>(initialFormState);
   const [isGuardianVisible, setGuardianVisible] = useState(false);
   const [isSexDisabled, setSexDisabled] = useState(true);
@@ -134,6 +135,9 @@ export const CreateVisitForm: React.FC<CreateVisitFormProps> = ({ onInitiateRepo
 
 
   useEffect(() => {
+        // load referral doctors from API
+        let mounted = true;
+        apiClient.getReferralDoctors().then(docs => { if (mounted) setReferralDoctors(docs); }).catch(() => {});
     const salutation = formData.salutation;
     let newSex: Sex = formData.sex;
     let sexDisabled = true;
@@ -428,7 +432,7 @@ export const CreateVisitForm: React.FC<CreateVisitFormProps> = ({ onInitiateRepo
 
                     {isGuardianVisible && <Input name="guardian_name" label="Guardian Name" value={formData.guardian_name || ''} onChange={handleChange} required={isGuardianVisible} className="sm:col-span-12"/>}
 
-                    <Select name="referred_doctor_id" label="Ref Doctor" value={String(formData.referred_doctor_id || '')} onChange={handleChange} options={[{label: '--Select Doctor--', value: ''}, ...mockReferralDoctors.map(d => ({ label: d.name, value: d.id }))]} className="sm:col-span-6"/>
+                    <Select name="referred_doctor_id" label="Ref Doctor" value={String(formData.referred_doctor_id || '')} onChange={handleChange} options={[{label: '--Select Doctor--', value: ''}, ...referralDoctors.map(d => ({ label: d.name, value: d.id }))]} className="sm:col-span-6"/>
                     <Select name="ref_customer_id" label="B2B Client / Customer" value={String(formData.ref_customer_id || '')} onChange={handleChange} options={[{label: '--Select Customer--', value: ''}, ...clients.map(c => ({ label: c.name, value: c.id }))]} className="sm:col-span-6"/>
                     
                     <Input name="other_ref_doctor" label="Other Ref. Doctor" value={formData.other_ref_doctor || ''} onChange={handleChange} className="sm:col-span-6"/>

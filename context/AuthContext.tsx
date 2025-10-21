@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
 import { User, Permission } from '../types';
-import { mockUsers } from '../api/mock';
+import { apiClient } from '../api/client';
 
 interface AuthContextType {
   user: User | null;
@@ -14,21 +14,31 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
 
-  const login = async (username: string, password_hash: string): Promise<void> => {
-    return new Promise((resolve, reject) => {
-        setTimeout(() => { // Simulate network delay
-            const foundUser = mockUsers.find(
-                u => u.username.toLowerCase() === username.toLowerCase() && u.password_hash === password_hash
-            );
-            if (foundUser) {
-                const { password_hash, ...userToStore } = foundUser;
-                setUser(userToStore);
-                resolve();
-            } else {
-                reject(new Error('Invalid username or password'));
-            }
-        }, 500);
-    });
+  // Try to restore session from stored token
+  React.useEffect(() => {
+    const restore = async () => {
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+      try {
+        const data = await apiClient.verifyToken();
+        if (data && data.user) setUser(data.user);
+      } catch (err) {
+        console.warn('Token verification failed:', err);
+        localStorage.removeItem('authToken');
+      }
+    };
+    restore();
+  }, []);
+
+  const login = async (username: string, password: string): Promise<void> => {
+    // Call backend API to get JWT token + user
+    const res = await apiClient.login(username, password);
+    if (res && res.token) {
+      localStorage.setItem('authToken', res.token);
+    }
+    if (res && res.user) {
+      setUser(res.user);
+    }
   };
 
   const logout = useCallback(() => {

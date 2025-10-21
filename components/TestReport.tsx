@@ -1,7 +1,7 @@
 import React from 'react';
 import { VisitTest, Visit, Signatory } from '../types';
 import { useAppContext } from '../context/AppContext';
-import { mockReferralDoctors, mockClients } from '../api/mock';
+import { apiClient } from '../api/client';
 import { MicrobiologyReportDisplay } from './MicrobiologyReportDisplay';
 
 interface TestReportProps {
@@ -40,6 +40,13 @@ const formatDate = (dateString?: string) => {
 
 export const TestReport: React.FC<TestReportProps> = ({ visit, signatory, canEdit, onEdit }) => {
   const { visitTests } = useAppContext();
+    const [referralDoctors, setReferralDoctors] = React.useState<{ id: number; name: string }[]>([]);
+
+    React.useEffect(() => {
+        let mounted = true;
+        apiClient.getReferralDoctors().then(d => { if (mounted) setReferralDoctors(d); }).catch(() => {});
+        return () => { mounted = false; };
+    }, []);
   
   const approvedTestsForVisit = visit.tests
     .map(testId => visitTests.find(vt => vt.id === testId && vt.status === 'APPROVED'))
@@ -53,7 +60,7 @@ export const TestReport: React.FC<TestReportProps> = ({ visit, signatory, canEdi
   }
 
   const firstTest = approvedTestsForVisit[0];
-  const doctor = mockReferralDoctors.find(d => d.id === visit.referred_doctor_id);
+    const doctor = referralDoctors.find(d => d.id === visit.referred_doctor_id);
   
   const testsByCategory = approvedTestsForVisit.reduce((acc, test) => {
     const category = test.template.category || 'Uncategorized';
@@ -64,8 +71,8 @@ export const TestReport: React.FC<TestReportProps> = ({ visit, signatory, canEdi
     return acc;
   }, {} as Record<string, VisitTest[]>);
 
-  const client = mockClients.find(c => c.id === visit.ref_customer_id);
-  const isB2BClient = client?.type === 'REFERRAL_LAB';
+    const client = useAppContext().clients.find(c => c.id === visit.ref_customer_id);
+    const isB2BClient = client?.type === 'REFERRAL_LAB';
 
 
   return (

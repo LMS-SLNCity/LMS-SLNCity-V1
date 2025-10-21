@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Visit, Signatory } from '../types';
-import { mockSignatories } from '../api/mock';
+import { apiClient } from '../api/client';
 import { Select } from './form/Select';
 
 interface SignatorySelectionModalProps {
@@ -10,7 +10,14 @@ interface SignatorySelectionModalProps {
 }
 
 export const SignatorySelectionModal: React.FC<SignatorySelectionModalProps> = ({ visit, onClose, onConfirm }) => {
-  const [signatoryId, setSignatoryId] = useState<number | undefined>(mockSignatories[0]?.id);
+  const [signatoryId, setSignatoryId] = useState<number | undefined>(undefined);
+  const [signatories, setSignatories] = useState<any[]>([]);
+
+  React.useEffect(() => {
+    let mounted = true;
+    apiClient.getSignatories().then(s => { if (mounted) { setSignatories(s); setSignatoryId(s[0]?.id); } }).catch(() => {});
+    return () => { mounted = false; };
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,7 +27,7 @@ export const SignatorySelectionModal: React.FC<SignatorySelectionModalProps> = (
       return;
     }
 
-    const signatory = mockSignatories.find(s => s.id === signatoryId);
+  const signatory = signatories.find((s: any) => s.id === signatoryId);
     
     if (signatory) {
       onConfirm(signatory);
@@ -29,7 +36,7 @@ export const SignatorySelectionModal: React.FC<SignatorySelectionModalProps> = (
     }
   };
 
-  const signatoryOptions = [{ label: '-- Select Signatory --', value: ''}, ...mockSignatories.map(s => ({ label: `${s.name} (${s.title})`, value: s.id }))];
+  const signatoryOptions = [{ label: '-- Select Signatory --', value: ''}, ...signatories.map((s: any) => ({ label: `${s.name} (${s.title})`, value: s.id }))];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" aria-labelledby="modal-title" role="dialog" aria-modal="true">

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import type { Visit, VisitTest, Patient, TestTemplate, VisitTestStatus, User, Role, UserWithPassword, Client, ClientPrice, LedgerEntry, RolePermissions, Permission, CultureResult, AuditLog, Antibiotic } from '../types';
-import { mockTestTemplates, mockUsers, mockClients, mockClientPrices, mockLedgerEntries, mockRolePermissions, mockAuditLogs, mockAntibiotics, mockPatients } from '../api/mock';
+import { apiClient } from '../api/client';
 
 // Define a type for user creation data to avoid exposing password hash elsewhere
 type UserCreationData = Omit<User, 'id' | 'isActive' | 'permissions'> & { password_hash: string };
@@ -75,16 +75,57 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [state, setState] = useState<AppState>({
     visits: [],
     visitTests: [],
-    users: mockUsers,
-    testTemplates: mockTestTemplates,
-    clients: mockClients,
-    clientPrices: mockClientPrices,
-    ledgerEntries: mockLedgerEntries,
-    rolePermissions: mockRolePermissions,
-    auditLogs: mockAuditLogs,
-    antibiotics: mockAntibiotics,
-    patients: mockPatients,
+    users: [],
+    testTemplates: [],
+    clients: [],
+    clientPrices: [],
+    ledgerEntries: [],
+    rolePermissions: {},
+    auditLogs: [],
+    antibiotics: [],
+    patients: [],
   });
+
+  // Fetch initial data from backend API (Postgres). No mock fallback.
+  React.useEffect(() => {
+    let mounted = true;
+    const loadInitial = async () => {
+      try {
+        const [users, testTemplates, clients, patients, antibiotics, signatories, clientPrices, rolePermissions, auditLogs] = await Promise.all([
+          apiClient.getUsers().catch(() => []),
+          apiClient.getTestTemplates().catch(() => []),
+          apiClient.getClients().catch(() => []),
+          apiClient.getPatients().catch(() => []),
+          apiClient.getAntibiotics().catch(() => []),
+          apiClient.getSignatories().catch(() => []),
+          // client prices and rolePermissions/auditLogs endpoints may be separate
+          // fallback to empty arrays if endpoints not present
+          Promise.resolve([]), // clientPrices
+          Promise.resolve({}), // rolePermissions
+          Promise.resolve([]), // auditLogs
+        ]);
+
+        if (!mounted) return;
+
+        setState(prev => ({
+          ...prev,
+          users,
+          testTemplates,
+          clients,
+          patients,
+          antibiotics,
+          // Note: signatories are often used in selection UIs; store them in auditLogs? keep auditLogs separate
+          // If you have a dedicated signatories state, consider adding it to AppState.
+        }));
+      } catch (err) {
+        console.error('Error loading initial data from API:', err);
+        // keep empty state if API unavailable
+      }
+    };
+
+    loadInitial();
+    return () => { mounted = false; };
+  }, []);
   
   const addAuditLog = (username: string, action: string, details: string) => {
       setState(prevState => {
