@@ -238,17 +238,17 @@ const seedData = async () => {
     }
 
     // Seed Clients
-    const clients = [
+    const clientsData = [
       { name: 'CDCMARKAPUR', type: 'REFERRAL_LAB' },
       { name: 'General Hospital', type: 'REFERRAL_LAB' },
       { name: 'City Clinic', type: 'REFERRAL_LAB' },
       { name: 'Walk-in Patient', type: 'PATIENT' },
     ];
 
-    for (const client of clients) {
+    for (const clientData of clientsData) {
       await client.query(
         'INSERT INTO clients (name, type, balance) VALUES ($1, $2, $3)',
-        [client.name, client.type, 0]
+        [clientData.name, clientData.type, 0]
       );
     }
 
