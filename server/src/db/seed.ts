@@ -1,6 +1,5 @@
 import pool from './connection.js';
 import { Pool } from 'pg';
-import bcrypt from 'bcryptjs';
 
 const seedData = async () => {
   // First, connect as postgres to create the lms_user if it doesn't exist
@@ -45,23 +44,8 @@ const seedData = async () => {
   try {
     await client.query('BEGIN');
 
-    // Seed Users
-    const users = [
-      { username: 'sudo', password: 'sudo', role: 'SUDO' },
-      { username: 'admin', password: 'admin', role: 'ADMIN' },
-      { username: 'reception', password: 'reception', role: 'RECEPTION' },
-      { username: 'phlebo', password: 'phlebo', role: 'PHLEBOTOMY' },
-      { username: 'labtech', password: 'labtech', role: 'LAB' },
-      { username: 'approver', password: 'approver', role: 'APPROVER' },
-    ];
-
-    for (const user of users) {
-      const hashedPassword = await bcrypt.hash(user.password, 10);
-      await client.query(
-        'INSERT INTO users (username, password_hash, role, is_active) VALUES ($1, $2, $3, $4)',
-        [user.username, hashedPassword, user.role, true]
-      );
-    }
+    // Note: Users should be created through the admin panel or API
+    // No default users are seeded to production database
 
     // Seed Antibiotics
     const antibiotics = [
@@ -222,103 +206,17 @@ const seedData = async () => {
       );
     }
 
-    // Seed Referral Doctors
-    const doctors = [
-      { name: 'Dr. John Doe' },
-      { name: 'Dr. Jane Smith' },
-      { name: 'Dr. Emily Brown' },
-      { name: 'Dr. Michael Johnson' },
-    ];
+    // Note: Referral doctors should be created through the admin panel or API
+    // No default referral doctors are seeded
 
-    for (const doctor of doctors) {
-      await client.query(
-        'INSERT INTO referral_doctors (name) VALUES ($1)',
-        [doctor.name]
-      );
-    }
+    // Note: B2B clients should be created through the admin panel or API
+    // No default clients are seeded
 
-    // Seed Clients
-    const clientsData = [
-      { name: 'CDCMARKAPUR', type: 'REFERRAL_LAB' },
-      { name: 'General Hospital', type: 'REFERRAL_LAB' },
-      { name: 'City Clinic', type: 'REFERRAL_LAB' },
-      { name: 'Walk-in Patient', type: 'PATIENT' },
-    ];
+    // Note: Signatories should be created through the admin panel or API
+    // No default signatories are seeded
 
-    for (const clientData of clientsData) {
-      await client.query(
-        'INSERT INTO clients (name, type, balance) VALUES ($1, $2, $3)',
-        [clientData.name, clientData.type, 0]
-      );
-    }
-
-    // Seed Client Prices
-    await client.query(
-      'INSERT INTO client_prices (client_id, test_template_id, price) VALUES ($1, $2, $3)',
-      [1, 1, 280]
-    );
-
-    // Seed Signatories
-    const signatories = [
-      { name: 'DR MISBHA LATEEFA, MD', title: 'Consultant Pathologist' },
-      { name: 'DR ASHA KIRAN, MBBS, MD', title: 'Consultant Pathologist' },
-      { name: 'T.V. SUBBARAO', title: 'M.Sc., Bio-Chemist' },
-      { name: 'K. SRINIVAS', title: 'M.Sc., Micro-Biologist' },
-    ];
-
-    for (const signatory of signatories) {
-      await client.query(
-        'INSERT INTO signatories (name, title) VALUES ($1, $2)',
-        [signatory.name, signatory.title]
-      );
-    }
-
-    // Seed Patients
-    const patients = [
-      {
-        salutation: 'Mr',
-        name: 'John Smith',
-        age_years: 45,
-        age_months: 0,
-        age_days: 0,
-        sex: 'Male',
-        phone: '9876543210',
-        address: '123 Main St, Anytown',
-        email: 'john.smith@example.com',
-        clinical_history: 'Hypertension',
-      },
-      {
-        salutation: 'Ms',
-        name: 'Maria Garcia',
-        age_years: 32,
-        age_months: 0,
-        age_days: 0,
-        sex: 'Female',
-        phone: '1234567890',
-        address: '456 Oak Ave, Anytown',
-        email: 'maria.garcia@example.com',
-        clinical_history: 'None',
-      },
-    ];
-
-    for (const patient of patients) {
-      await client.query(
-        `INSERT INTO patients (salutation, name, age_years, age_months, age_days, sex, phone, address, email, clinical_history)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-        [
-          patient.salutation,
-          patient.name,
-          patient.age_years,
-          patient.age_months,
-          patient.age_days,
-          patient.sex,
-          patient.phone,
-          patient.address,
-          patient.email,
-          patient.clinical_history,
-        ]
-      );
-    }
+    // Note: Patients should be created through the reception panel or API
+    // No default patients are seeded
 
     await client.query('COMMIT');
     console.log('✅ Database seeded successfully!');

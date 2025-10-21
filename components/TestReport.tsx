@@ -1,7 +1,6 @@
 import React from 'react';
 import { VisitTest, Visit, Signatory } from '../types';
 import { useAppContext } from '../context/AppContext';
-import { mockReferralDoctors, mockClients } from '../api/mock';
 import { MicrobiologyReportDisplay } from './MicrobiologyReportDisplay';
 
 interface TestReportProps {
@@ -39,8 +38,8 @@ const formatDate = (dateString?: string) => {
 
 
 export const TestReport: React.FC<TestReportProps> = ({ visit, signatory, canEdit, onEdit }) => {
-  const { visitTests } = useAppContext();
-  
+  const { visitTests, clients } = useAppContext();
+
   const approvedTestsForVisit = visit.tests
     .map(testId => visitTests.find(vt => vt.id === testId && vt.status === 'APPROVED'))
     .filter(Boolean) as VisitTest[];
@@ -53,8 +52,8 @@ export const TestReport: React.FC<TestReportProps> = ({ visit, signatory, canEdi
   }
 
   const firstTest = approvedTestsForVisit[0];
-  const doctor = mockReferralDoctors.find(d => d.id === visit.referred_doctor_id);
-  
+  const doctorName = visit.referred_doctor_id ? `Dr. ID: ${visit.referred_doctor_id}` : visit.other_ref_doctor || 'N/A';
+
   const testsByCategory = approvedTestsForVisit.reduce((acc, test) => {
     const category = test.template.category || 'Uncategorized';
     if (!acc[category]) {
@@ -64,7 +63,7 @@ export const TestReport: React.FC<TestReportProps> = ({ visit, signatory, canEdi
     return acc;
   }, {} as Record<string, VisitTest[]>);
 
-  const client = mockClients.find(c => c.id === visit.ref_customer_id);
+  const client = clients.find(c => c.id === visit.ref_customer_id);
   const isB2BClient = client?.type === 'REFERRAL_LAB';
 
 
@@ -102,7 +101,7 @@ export const TestReport: React.FC<TestReportProps> = ({ visit, signatory, canEdi
                     <ReportRow label="Age / Gender" value={`${formatAge(visit.patient)} / ${visit.patient.sex}`} />
                     <ReportRow label="Sample Type" value={firstTest.specimen_type} />
                     <ReportRow label="Client Code" value={visit.ref_customer_id ? `C${visit.ref_customer_id}` : '-'} />
-                    <ReportRow label="Referred By" value={doctor?.name || visit.other_ref_doctor || 'SELF'} />
+                    <ReportRow label="Referred By" value={doctorName} />
                 </div>
                 <div className="flex flex-col justify-between items-end">
                      <div>

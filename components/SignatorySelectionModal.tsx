@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Visit, Signatory } from '../types';
-import { mockSignatories } from '../api/mock';
 import { Select } from './form/Select';
+import { apiClient } from '../api/client';
 
 interface SignatorySelectionModalProps {
   visit: Visit;
@@ -10,18 +10,38 @@ interface SignatorySelectionModalProps {
 }
 
 export const SignatorySelectionModal: React.FC<SignatorySelectionModalProps> = ({ visit, onClose, onConfirm }) => {
-  const [signatoryId, setSignatoryId] = useState<number | undefined>(mockSignatories[0]?.id);
+  const [signatories, setSignatories] = useState<Signatory[]>([]);
+  const [signatoryId, setSignatoryId] = useState<number | undefined>();
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSignatories = async () => {
+      try {
+        const data = await apiClient.getSignatories();
+        setSignatories(data);
+        if (data.length > 0) {
+          setSignatoryId(data[0].id);
+        }
+      } catch (error) {
+        console.error('Failed to fetch signatories:', error);
+        alert('Failed to load signatories');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchSignatories();
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!signatoryId) {
       alert('Please select a signatory.');
       return;
     }
 
-    const signatory = mockSignatories.find(s => s.id === signatoryId);
-    
+    const signatory = signatories.find(s => s.id === signatoryId);
+
     if (signatory) {
       onConfirm(signatory);
     } else {
@@ -29,7 +49,7 @@ export const SignatorySelectionModal: React.FC<SignatorySelectionModalProps> = (
     }
   };
 
-  const signatoryOptions = [{ label: '-- Select Signatory --', value: ''}, ...mockSignatories.map(s => ({ label: `${s.name} (${s.title})`, value: s.id }))];
+  const signatoryOptions = [{ label: '-- Select Signatory --', value: ''}, ...signatories.map(s => ({ label: s.username, value: s.id }))];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" aria-labelledby="modal-title" role="dialog" aria-modal="true">
@@ -38,23 +58,27 @@ export const SignatorySelectionModal: React.FC<SignatorySelectionModalProps> = (
             <div className="p-6">
                 <h3 className="text-xl font-bold text-gray-900" id="modal-title">Select Signatory for Report</h3>
                 <p className="text-sm text-gray-500 mt-1">Visit: {visit.visit_code} - {visit.patient.name}</p>
-                
+
                 <div className="mt-6 space-y-4">
-                    <Select
-                        label="Signatory"
-                        name="signatory"
-                        value={String(signatoryId || '')}
-                        onChange={(e) => setSignatoryId(Number(e.target.value))}
-                        options={signatoryOptions}
-                        required
-                    />
+                    {isLoading ? (
+                      <p className="text-gray-600">Loading signatories...</p>
+                    ) : (
+                      <Select
+                          label="Signatory"
+                          name="signatory"
+                          value={String(signatoryId || '')}
+                          onChange={(e) => setSignatoryId(Number(e.target.value))}
+                          options={signatoryOptions}
+                          required
+                      />
+                    )}
                 </div>
             </div>
             <div className="bg-gray-50 px-6 py-4 flex justify-end items-center space-x-3 rounded-b-xl">
                 <button type="button" onClick={onClose} className="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400">
                     Cancel
                 </button>
-                <button type="submit" className="px-4 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                <button type="submit" disabled={isLoading} className="px-4 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50">
                     Confirm & Generate Report
                 </button>
             </div>
