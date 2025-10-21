@@ -5,7 +5,7 @@ import { Input } from '../form/Input';
 import { useAuth } from '../../context/AuthContext';
 
 export const BranchManagement: React.FC = () => {
-    const { branches } = useAppContext();
+    const { branches, addBranch, updateBranch, deleteBranch } = useAppContext();
     const { user: actor } = useAuth();
     const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
     const [isFormOpen, setIsFormOpen] = useState(false);
@@ -47,15 +47,46 @@ export const BranchManagement: React.FC = () => {
         setIsFormOpen(true);
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!formData.name || !formData.address) {
             alert('Name and address are required');
             return;
         }
-        // TODO: Call API to save branch
-        alert('Branch saved successfully');
-        setIsFormOpen(false);
+        if (!actor) {
+            alert("User session has expired. Please log in again.");
+            return;
+        }
+
+        try {
+            if (editingBranch) {
+                await updateBranch({
+                    id: editingBranch.id,
+                    ...formData,
+                    isActive: editingBranch.isActive,
+                }, actor);
+            } else {
+                await addBranch({
+                    ...formData,
+                    isActive: true,
+                }, actor);
+            }
+            alert('Branch saved successfully');
+            setIsFormOpen(false);
+        } catch (error) {
+            alert('Error saving branch');
+            console.error(error);
+        }
+    };
+
+    const handleDeleteBranch = (branch: Branch) => {
+        if (!actor) {
+            alert("User session has expired. Please log in again.");
+            return;
+        }
+        if (window.confirm(`Are you sure you want to deactivate branch "${branch.name}"?`)) {
+            deleteBranch(branch.id, actor);
+        }
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -191,6 +222,14 @@ export const BranchManagement: React.FC = () => {
                                     >
                                         Edit
                                     </button>
+                                    {branch.isActive && (
+                                        <button
+                                            onClick={() => handleDeleteBranch(branch)}
+                                            className="text-red-600 hover:text-red-800 font-medium"
+                                        >
+                                            Delete
+                                        </button>
+                                    )}
                                 </td>
                             </tr>
                         ))}

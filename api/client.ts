@@ -397,5 +397,24 @@ export const apiClient = {
     if (!response.ok) throw new Error('Failed to fetch trends');
     return response.json();
   },
+
+  // Role Permissions
+  async getRolePermissions() {
+    const response = await fetch(`${API_BASE_URL}/role-permissions`, {
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to fetch role permissions');
+    return response.json();
+  },
+
+  async updateRolePermissions(role: string, permissions: string[]) {
+    const response = await fetch(`${API_BASE_URL}/role-permissions/${role}`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ permissions }),
+    });
+    if (!response.ok) throw new Error('Failed to update role permissions');
+    return response.json();
+  },
 };
 

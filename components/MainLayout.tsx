@@ -9,6 +9,7 @@ import { ReportModal } from './ReportModal';
 import { SignatorySelectionModal } from './SignatorySelectionModal';
 import { Visit, Signatory, User, Permission, VisitTest } from '../types';
 import { useAuth } from '../context/AuthContext';
+import { useAppContext } from '../context/AppContext';
 import { ResultEntryForm } from './ResultEntryForm';
 import { EditReasonModal } from './EditReasonModal';
 
@@ -27,25 +28,31 @@ const viewOrder: { view: View; permission: Permission }[] = [
 
 export const MainLayout: React.FC<MainLayoutProps> = ({ user }) => {
   const { hasPermission, logout } = useAuth();
-  
+  const { reloadData } = useAppContext();
+
   const allowedViews = useMemo(() => {
     return viewOrder
         .filter(item => hasPermission(item.permission))
         .map(item => item.view);
   }, [user.permissions, hasPermission]);
-  
+
   // FIX: Initialize with undefined and let useEffect handle setting the initial view.
   const [currentView, setCurrentView] = useState<View | undefined>(undefined);
-  
+
+  // Reload data after user logs in
+  useEffect(() => {
+    reloadData();
+  }, [user, reloadData]);
+
   useEffect(() => {
     const defaultView = allowedViews.length > 0 ? allowedViews[0] : undefined;
-    
+
     if (user && allowedViews.length === 0) {
         alert("You do not have any permissions to view this application. Please contact an administrator.");
         logout();
-        return; 
+        return;
     }
-    
+
     // This condition prevents the infinite loop.
     // It only sets the view if it's undefined (on initial load) or invalid.
     if (!currentView || !allowedViews.includes(currentView)) {
@@ -110,14 +117,14 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ user }) => {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800">
-        <header className="bg-white shadow-sm sticky top-0 z-20">
-        <div className="container mx-auto px-6 py-3 flex justify-between items-center">
-            <div className="flex items-center space-x-2">
-                <h1 className="text-2xl font-bold text-brand-secondary">SLNCity</h1>
-                <span className="text-gray-500 font-light">Diagnostic Center</span>
+        <header className="bg-white shadow-sm sticky top-0 z-20 overflow-hidden">
+        <div className="container mx-auto px-2 sm:px-4 py-2 flex justify-between items-center gap-2 min-w-0">
+            <div className="flex items-center gap-1 min-w-0 flex-shrink-0">
+                <h1 className="text-lg sm:text-xl font-bold text-brand-secondary whitespace-nowrap">SLNCity</h1>
+                <span className="text-gray-500 font-light text-xs sm:text-sm hidden sm:inline whitespace-nowrap">Diagnostic</span>
             </div>
-            <div className="flex items-center space-x-4">
-                <span className="text-sm text-gray-600 hidden sm:block">Welcome, <span className="font-semibold">{user.username} ({user.role})</span></span>
+            <div className="flex items-center gap-1 sm:gap-2 justify-end min-w-0 flex-shrink-0">
+                <span className="text-xs text-gray-600 hidden lg:inline whitespace-nowrap">Welcome, <span className="font-semibold">{user.username}</span></span>
                 <Navbar currentView={currentView} setCurrentView={setCurrentView} allowedViews={allowedViews} />
             </div>
         </div>

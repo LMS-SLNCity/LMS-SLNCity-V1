@@ -15,7 +15,7 @@ export const UserManagement: React.FC = () => {
     const [role, setRole] = useState<Role>('RECEPTION');
     const [editingUser, setEditingUser] = useState<User | null>(null);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if(!username || !password || !role) {
             alert('Please fill all fields');
@@ -25,10 +25,16 @@ export const UserManagement: React.FC = () => {
             alert("User session has expired. Please log in again.");
             return;
         }
-        addUser({ username, password_hash: password, role }, actor);
-        setUsername('');
-        setPassword('');
-        setRole('RECEPTION');
+        try {
+            await addUser({ username, password_hash: password, role }, actor);
+            setUsername('');
+            setPassword('');
+            setRole('RECEPTION');
+            alert('User created successfully');
+        } catch (error) {
+            console.error('Failed to create user:', error);
+            alert('Failed to create user. Please try again.');
+        }
     };
 
     const roleOptions: Role[] = ['SUDO', 'ADMIN', 'RECEPTION', 'PHLEBOTOMY', 'LAB', 'APPROVER'];

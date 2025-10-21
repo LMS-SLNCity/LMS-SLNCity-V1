@@ -165,15 +165,16 @@ export const TestReport: React.FC<TestReportProps> = ({ visit, signatory, canEdi
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {test.template.parameters.fields.map(param => (
-                                                    <tr key={param.name} className="border-b border-gray-100 last:border-b-0">
-                                                        <td className="pl-6 pr-4 py-1.5 text-gray-800">{param.name}</td>
-                                                        <td className="px-4 py-1.5 font-bold text-black">{String(test.results?.[param.name] ?? '-')}</td>
-                                                        <td className="px-4 py-1.5 text-gray-800">{param.unit || ''}</td>
-                                                        <td className="px-4 py-1.5 text-gray-800">{param.reference_range || ''}</td>
-                                                    </tr>
-                                                ))}
-                                                {test.template.parameters.fields.length === 0 && (
+                                                {test.template.parameters?.fields && test.template.parameters.fields.length > 0 ? (
+                                                    test.template.parameters.fields.map(param => (
+                                                        <tr key={param.name} className="border-b border-gray-100 last:border-b-0">
+                                                            <td className="pl-6 pr-4 py-1.5 text-gray-800">{param.name}</td>
+                                                            <td className="px-4 py-1.5 font-bold text-black">{String(test.results?.[param.name] ?? '-')}</td>
+                                                            <td className="px-4 py-1.5 text-gray-800">{param.unit || ''}</td>
+                                                            <td className="px-4 py-1.5 text-gray-800">{param.reference_range || ''}</td>
+                                                        </tr>
+                                                    ))
+                                                ) : (
                                                     <tr><td colSpan={4} className="px-4 py-3 text-center text-gray-500">No parameters for this test.</td></tr>
                                                 )}
                                             </tbody>

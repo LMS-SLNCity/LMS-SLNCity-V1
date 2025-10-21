@@ -4,15 +4,19 @@ import { useAuth } from '../../context/AuthContext';
 import { Client } from '../../types';
 import { ClientLedgerModal } from './ClientLedgerModal';
 import { ClientPriceEditorModal } from './ClientPriceEditorModal';
+import { B2BAccountManagementModal } from './B2BAccountManagementModal';
 
 export const B2BManagement: React.FC = () => {
-    const { clients, addClient } = useAppContext();
+    const { clients, addClient, deleteClient, settleClientBalance } = useAppContext();
     const { user: actor } = useAuth();
     const [selectedClient, setSelectedClient] = useState<Client | null>(null);
     const [isLedgerOpen, setIsLedgerOpen] = useState(false);
     const [isPriceEditorOpen, setIsPriceEditorOpen] = useState(false);
+    const [isAccountManagementOpen, setIsAccountManagementOpen] = useState(false);
     const [clientName, setClientName] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [deletingId, setDeletingId] = useState<number | null>(null);
+    const [settlingId, setSettlingId] = useState<number | null>(null);
 
     const b2bClients = clients.filter(c => c.type === 'REFERRAL_LAB');
 
@@ -51,16 +55,67 @@ export const B2BManagement: React.FC = () => {
         setIsPriceEditorOpen(true);
     };
 
+    const openAccountManagement = (client: Client) => {
+        setSelectedClient(client);
+        setIsAccountManagementOpen(true);
+    };
+
     const closeModal = () => {
         setSelectedClient(null);
         setIsLedgerOpen(false);
         setIsPriceEditorOpen(false);
-    }
+        setIsAccountManagementOpen(false);
+    };
+
+    const handleDeleteClient = async (clientId: number) => {
+        if (!actor) {
+            alert("User session has expired. Please log in again.");
+            return;
+        }
+
+        if (!window.confirm('Are you sure you want to delete this client? This action cannot be undone.')) {
+            return;
+        }
+
+        setDeletingId(clientId);
+        try {
+            await deleteClient(clientId, actor);
+            alert('Client deleted successfully');
+        } catch (error) {
+            console.error('Failed to delete client:', error);
+            alert('Failed to delete client');
+        } finally {
+            setDeletingId(null);
+        }
+    };
+
+    const handleSettleBalance = async (clientId: number) => {
+        if (!actor) {
+            alert("User session has expired. Please log in again.");
+            return;
+        }
+
+        if (!window.confirm('Are you sure you want to settle this client\'s balance to ₹0?')) {
+            return;
+        }
+
+        setSettlingId(clientId);
+        try {
+            await settleClientBalance(clientId, actor);
+            alert('Client balance settled successfully');
+        } catch (error) {
+            console.error('Failed to settle balance:', error);
+            alert('Failed to settle balance');
+        } finally {
+            setSettlingId(null);
+        }
+    };
 
     return (
         <>
         {isLedgerOpen && selectedClient && <ClientLedgerModal client={selectedClient} onClose={closeModal} />}
         {isPriceEditorOpen && selectedClient && <ClientPriceEditorModal client={selectedClient} onClose={closeModal} />}
+        {isAccountManagementOpen && selectedClient && <B2BAccountManagementModal client={selectedClient} onClose={closeModal} />}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Add New Client Form */}
@@ -115,9 +170,24 @@ export const B2BManagement: React.FC = () => {
                                         {client.balance.toFixed(2)}
                                     </span>
                                 </td>
-                                <td className="px-4 py-3 text-sm space-x-4">
-                                    <button onClick={() => openLedger(client)} className="text-green-600 hover:text-green-800 font-medium">View Ledger</button>
-                                    <button onClick={() => openPriceEditor(client)} className="text-blue-600 hover:text-blue-800 font-medium">Edit Prices</button>
+                                <td className="px-4 py-3 text-sm space-x-1">
+                                    <button onClick={() => openLedger(client)} className="text-green-600 hover:text-green-800 font-medium text-xs px-2 py-1 bg-green-50 rounded">Ledger</button>
+                                    <button onClick={() => openPriceEditor(client)} className="text-blue-600 hover:text-blue-800 font-medium text-xs px-2 py-1 bg-blue-50 rounded">Prices</button>
+                                    <button onClick={() => openAccountManagement(client)} className="text-purple-600 hover:text-purple-800 font-medium text-xs px-2 py-1 bg-purple-50 rounded">Account</button>
+                                    <button
+                                        onClick={() => handleSettleBalance(client.id)}
+                                        disabled={settlingId === client.id}
+                                        className="text-orange-600 hover:text-orange-800 font-medium text-xs px-2 py-1 bg-orange-50 rounded disabled:opacity-50"
+                                    >
+                                        {settlingId === client.id ? 'Settling...' : 'Settle'}
+                                    </button>
+                                    <button
+                                        onClick={() => handleDeleteClient(client.id)}
+                                        disabled={deletingId === client.id}
+                                        className="text-red-600 hover:text-red-800 font-medium text-xs px-2 py-1 bg-red-50 rounded disabled:opacity-50"
+                                    >
+                                        {deletingId === client.id ? 'Deleting...' : 'Delete'}
+                                    </button>
                                 </td>
                             </tr>
                         ))}

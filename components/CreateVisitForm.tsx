@@ -286,7 +286,7 @@ export const CreateVisitForm: React.FC<CreateVisitFormProps> = ({ onInitiateRepo
   }
 
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!actor) {
@@ -298,9 +298,9 @@ export const CreateVisitForm: React.FC<CreateVisitFormProps> = ({ onInitiateRepo
         alert("Please select at least one test.");
         return;
     }
-    
+
     const { age, age_unit, ...restOfForm } = formData;
-    
+
     const newVisitData = {
         patient: {
             salutation: restOfForm.salutation,
@@ -326,8 +326,14 @@ export const CreateVisitForm: React.FC<CreateVisitFormProps> = ({ onInitiateRepo
         payment_mode: isB2BClient ? '' : restOfForm.payment_mode,
     };
 
-    addVisit(newVisitData, actor);
-    setSubmissionStatus('submitted');
+    try {
+      await addVisit(newVisitData, actor);
+      setSubmissionStatus('submitted');
+    } catch (error) {
+      console.error('Failed to create visit:', error);
+      alert('Failed to create visit. Please try again.');
+      setSubmissionStatus('error');
+    }
   };
 
   const handleCollectDueSuccess = (visitId: number, amount: number, mode: PaymentMode) => {

@@ -8,9 +8,11 @@ router.get('/', async (req: Request, res: Response) => {
     const result = await pool.query(
       `SELECT v.id, v.patient_id, v.referred_doctor_id, v.ref_customer_id, v.other_ref_doctor, v.other_ref_customer,
               v.registration_datetime, v.visit_code, v.total_cost, v.amount_paid, v.payment_mode, v.due_amount, v.created_at,
-              p.salutation, p.name, p.age_years, p.age_months, p.age_days, p.sex, p.phone, p.address, p.email, p.clinical_history
+              p.salutation, p.name, p.age_years, p.age_months, p.age_days, p.sex, p.phone, p.address, p.email, p.clinical_history,
+              c.id as client_id, c.name as client_name, c.type as client_type, c.balance as client_balance
        FROM visits v
        JOIN patients p ON v.patient_id = p.id
+       LEFT JOIN clients c ON v.ref_customer_id = c.id
        ORDER BY v.created_at DESC`
     );
 
@@ -55,6 +57,12 @@ router.get('/', async (req: Request, res: Response) => {
         email: row.email,
         clinical_history: row.clinical_history,
       },
+      b2bClient: row.client_id ? {
+        id: row.client_id,
+        name: row.client_name,
+        type: row.client_type,
+        balance: parseFloat(row.client_balance),
+      } : null,
       tests: testsByVisit[row.id] || [],
     }));
 

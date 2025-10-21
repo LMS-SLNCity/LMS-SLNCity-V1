@@ -2,15 +2,23 @@ import React, { useState } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 
+interface ReferralDoctor {
+  id: number;
+  name: string;
+}
+
 export const ReferralDoctorManagement: React.FC = () => {
-    const { referralDoctors, addReferralDoctor } = useAppContext();
+    const { referralDoctors, addReferralDoctor, updateReferralDoctor, deleteReferralDoctor } = useAppContext();
     const { user: actor } = useAuth();
     const [doctorName, setDoctorName] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [editingId, setEditingId] = useState<number | null>(null);
+    const [editingName, setEditingName] = useState('');
+    const [deletingId, setDeletingId] = useState<number | null>(null);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (!doctorName.trim()) {
             alert('Please enter doctor name');
             return;
@@ -30,6 +38,55 @@ export const ReferralDoctorManagement: React.FC = () => {
             alert('Failed to add referral doctor');
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleEditStart = (doctor: ReferralDoctor) => {
+        setEditingId(doctor.id);
+        setEditingName(doctor.name);
+    };
+
+    const handleEditSave = async (doctorId: number) => {
+        if (!editingName.trim()) {
+            alert('Please enter doctor name');
+            return;
+        }
+
+        if (!actor) {
+            alert("User session has expired. Please log in again.");
+            return;
+        }
+
+        try {
+            await updateReferralDoctor(doctorId, { name: editingName }, actor);
+            setEditingId(null);
+            setEditingName('');
+            alert('Doctor updated successfully');
+        } catch (error) {
+            console.error('Failed to update doctor:', error);
+            alert('Failed to update doctor');
+        }
+    };
+
+    const handleDelete = async (doctorId: number) => {
+        if (!actor) {
+            alert("User session has expired. Please log in again.");
+            return;
+        }
+
+        if (!window.confirm('Are you sure you want to delete this referral doctor?')) {
+            return;
+        }
+
+        setDeletingId(doctorId);
+        try {
+            await deleteReferralDoctor(doctorId, actor);
+            alert('Doctor deleted successfully');
+        } catch (error) {
+            console.error('Failed to delete doctor:', error);
+            alert('Failed to delete doctor');
+        } finally {
+            setDeletingId(null);
         }
     };
 
@@ -73,6 +130,7 @@ export const ReferralDoctorManagement: React.FC = () => {
                             <tr>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">ID</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Doctor Name</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
@@ -80,12 +138,57 @@ export const ReferralDoctorManagement: React.FC = () => {
                                 referralDoctors.map((doctor, index) => (
                                     <tr key={doctor.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50 hover:bg-gray-100'}>
                                         <td className="px-4 py-3 text-sm text-gray-600">{doctor.id}</td>
-                                        <td className="px-4 py-3 text-sm font-medium text-gray-800">{doctor.name}</td>
+                                        <td className="px-4 py-3 text-sm font-medium text-gray-800">
+                                            {editingId === doctor.id ? (
+                                                <input
+                                                    type="text"
+                                                    value={editingName}
+                                                    onChange={(e) => setEditingName(e.target.value)}
+                                                    className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                                                />
+                                            ) : (
+                                                doctor.name
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3 text-sm space-x-2">
+                                            {editingId === doctor.id ? (
+                                                <>
+                                                    <button
+                                                        onClick={() => handleEditSave(doctor.id)}
+                                                        className="text-green-600 hover:text-green-800 font-medium text-xs px-2 py-1 bg-green-50 rounded"
+                                                    >
+                                                        Save
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setEditingId(null)}
+                                                        className="text-gray-600 hover:text-gray-800 font-medium text-xs px-2 py-1 bg-gray-50 rounded"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <button
+                                                        onClick={() => handleEditStart(doctor)}
+                                                        className="text-blue-600 hover:text-blue-800 font-medium text-xs px-2 py-1 bg-blue-50 rounded"
+                                                    >
+                                                        Edit
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(doctor.id)}
+                                                        disabled={deletingId === doctor.id}
+                                                        className="text-red-600 hover:text-red-800 font-medium text-xs px-2 py-1 bg-red-50 rounded disabled:opacity-50"
+                                                    >
+                                                        {deletingId === doctor.id ? 'Deleting...' : 'Delete'}
+                                                    </button>
+                                                </>
+                                            )}
+                                        </td>
                                     </tr>
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={2} className="px-4 py-3 text-center text-sm text-gray-500">
+                                    <td colSpan={3} className="px-4 py-3 text-center text-sm text-gray-500">
                                         No referral doctors found
                                     </td>
                                 </tr>

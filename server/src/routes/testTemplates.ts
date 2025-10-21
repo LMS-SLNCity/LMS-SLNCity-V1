@@ -137,17 +137,35 @@ router.patch('/:id', async (req: Request, res: Response) => {
   }
 });
 
-// Delete test template
+// Delete test template (soft delete - set is_active to false)
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const result = await pool.query('DELETE FROM test_templates WHERE id = $1 RETURNING id', [id]);
+    const result = await pool.query(
+      `UPDATE test_templates
+       SET is_active = false, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1
+       RETURNING id, code, name, category, price, b2b_price, is_active, report_type, parameters, default_antibiotic_ids`,
+      [id]
+    );
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Test template not found' });
     }
 
-    res.json({ message: 'Test template deleted' });
+    const row = result.rows[0];
+    res.json({
+      id: row.id,
+      code: row.code,
+      name: row.name,
+      category: row.category,
+      price: parseFloat(row.price),
+      b2b_price: parseFloat(row.b2b_price),
+      isActive: row.is_active,
+      reportType: row.report_type,
+      parameters: typeof row.parameters === 'string' ? JSON.parse(row.parameters) : row.parameters,
+      defaultAntibioticIds: row.default_antibiotic_ids,
+    });
   } catch (error) {
     console.error('Error deleting test template:', error);
     res.status(500).json({ error: 'Internal server error' });

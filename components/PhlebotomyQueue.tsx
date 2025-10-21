@@ -42,12 +42,21 @@ export const PhlebotomyQueue: React.FC<PhlebotomyQueueProps> = ({ onInitiateRepo
   const pendingSamples = visitTests.filter(test => test.status === 'PENDING');
   const collectedSamples = visitTests.filter(test => ['SAMPLE_COLLECTED', 'AWAITING_APPROVAL', 'APPROVED', 'IN_PROGRESS'].includes(test.status)).sort((a, b) => new Date(b.collectedAt!).getTime() - new Date(a.collectedAt!).getTime());
 
-  const handleCollectSample = (testId: number) => {
+  const handleCollectSample = async (testId: number) => {
     if (!user) {
         alert("User session has expired. Please log in again.");
         return;
     }
-    updateVisitTestStatus(testId, 'SAMPLE_COLLECTED', user, { collectedBy: user.username, specimen_type: 'WB EDTA-2511599' });
+    const test = visitTests.find(t => t.id === testId);
+    if (!test) {
+        alert("Test not found");
+        return;
+    }
+    if (test.status !== 'PENDING') {
+        alert(`Cannot collect sample. Test status is ${test.status}. Only PENDING tests can have samples collected.`);
+        return;
+    }
+    await updateVisitTestStatus(testId, 'SAMPLE_COLLECTED', user, { collectedBy: user.username, specimen_type: 'WB EDTA-2511599' });
   };
 
   const findVisitForTest = (test: VisitTest): Visit | undefined => {

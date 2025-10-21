@@ -23,6 +23,18 @@ export interface Client {
     balance: number;
 }
 
+export interface Branch {
+    id: number;
+    name: string;
+    address: string;
+    phone?: string;
+    email?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+    isActive: boolean;
+}
+
 export interface TestTemplateParameter {
     name: string;
     type: 'number' | 'text';
@@ -87,6 +99,13 @@ export interface VisitTest {
 }
 
 
+export interface B2BClientInfo {
+  id: number;
+  name: string;
+  type: 'PATIENT' | 'REFERRAL_LAB' | 'INTERNAL';
+  balance: number;
+}
+
 export interface Visit {
   id: number;
   patient: Patient;
@@ -102,6 +121,7 @@ export interface Visit {
   payment_mode?: 'Cash' | 'Card' | 'UPI' | '';
   due_amount: number;
   tests: number[]; // Array of VisitTest IDs
+  b2bClient?: B2BClientInfo | null; // B2B client information if visit is from a B2B client
 }
 
 export interface Signatory {

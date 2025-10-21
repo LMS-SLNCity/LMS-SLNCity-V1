@@ -1,43 +1,49 @@
 import pool from './connection.js';
 import { Pool } from 'pg';
+import bcrypt from 'bcryptjs';
 
 const seedData = async () => {
-  // First, connect as postgres to create the lms_user if it doesn't exist
-  const adminPool = new Pool({
-    user: 'postgres',
-    password: 'postgres',
-    host: process.env.DB_HOST || 'localhost',
-    port: parseInt(process.env.DB_PORT || '5432'),
-    database: 'postgres',
-  });
-
-  const adminClient = await adminPool.connect();
+  // Try to connect as postgres to create the lms_user if it doesn't exist
+  // If postgres user doesn't exist, skip this step (database already set up)
   try {
-    // Check if lms_user exists
-    const userCheck = await adminClient.query(
-      "SELECT 1 FROM pg_user WHERE usename = 'lms_user'"
-    );
-    if (userCheck.rows.length === 0) {
-      console.log('Creating lms_user...');
-      await adminClient.query(
-        "CREATE USER lms_user WITH ENCRYPTED PASSWORD 'lms_password'"
+    const adminPool = new Pool({
+      user: 'postgres',
+      password: 'postgres',
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '5432'),
+      database: 'postgres',
+    });
+
+    const adminClient = await adminPool.connect();
+    try {
+      // Check if lms_user exists
+      const userCheck = await adminClient.query(
+        "SELECT 1 FROM pg_user WHERE usename = 'lms_user'"
       );
-      await adminClient.query('ALTER USER lms_user CREATEDB');
-    }
+      if (userCheck.rows.length === 0) {
+        console.log('Creating lms_user...');
+        await adminClient.query(
+          "CREATE USER lms_user WITH ENCRYPTED PASSWORD 'lms_password'"
+        );
+        await adminClient.query('ALTER USER lms_user CREATEDB');
+      }
 
-    // Check if lms_slncity database exists
-    const dbCheck = await adminClient.query(
-      "SELECT 1 FROM pg_database WHERE datname = 'lms_slncity'"
-    );
-    if (dbCheck.rows.length === 0) {
-      console.log('Creating lms_slncity database...');
-      await adminClient.query('CREATE DATABASE lms_slncity OWNER lms_user');
-    }
+      // Check if lms_slncity database exists
+      const dbCheck = await adminClient.query(
+        "SELECT 1 FROM pg_database WHERE datname = 'lms_slncity'"
+      );
+      if (dbCheck.rows.length === 0) {
+        console.log('Creating lms_slncity database...');
+        await adminClient.query('CREATE DATABASE lms_slncity OWNER lms_user');
+      }
 
-    await adminClient.query('GRANT ALL PRIVILEGES ON DATABASE lms_slncity TO lms_user');
-  } finally {
-    adminClient.release();
-    await adminPool.end();
+      await adminClient.query('GRANT ALL PRIVILEGES ON DATABASE lms_slncity TO lms_user');
+    } finally {
+      adminClient.release();
+      await adminPool.end();
+    }
+  } catch (error) {
+    console.log('Skipping admin setup (database already configured)');
   }
 
   const client = await pool.connect();
@@ -46,6 +52,10 @@ const seedData = async () => {
 
     // Note: Users should be created through the admin panel or API
     // No default users are seeded to production database
+
+    // Check if test templates already exist
+    const templateCheck = await client.query('SELECT COUNT(*) FROM test_templates');
+    const templatesExist = parseInt(templateCheck.rows[0].count) > 0;
 
     // Seed Antibiotics
     const antibiotics = [
@@ -188,22 +198,27 @@ const seedData = async () => {
       },
     ];
 
-    for (const template of testTemplates) {
-      await client.query(
-        `INSERT INTO test_templates (code, name, category, price, b2b_price, report_type, parameters, default_antibiotic_ids, is_active)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-        [
-          template.code,
-          template.name,
-          template.category,
-          template.price,
-          template.b2b_price,
-          template.reportType,
-          JSON.stringify(template.parameters),
-          template.defaultAntibioticIds || [],
-          true,
-        ]
-      );
+    if (!templatesExist) {
+      for (const template of testTemplates) {
+        await client.query(
+          `INSERT INTO test_templates (code, name, category, price, b2b_price, report_type, parameters, default_antibiotic_ids, is_active)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          [
+            template.code,
+            template.name,
+            template.category,
+            template.price,
+            template.b2b_price,
+            template.reportType,
+            JSON.stringify(template.parameters),
+            template.defaultAntibioticIds || [],
+            true,
+          ]
+        );
+      }
+      console.log('✅ Test templates seeded');
+    } else {
+      console.log('ℹ️  Test templates already exist, skipping');
     }
 
     // Note: Referral doctors should be created through the admin panel or API
@@ -215,11 +230,150 @@ const seedData = async () => {
     // Note: Signatories should be created through the admin panel or API
     // No default signatories are seeded
 
-    // Note: Patients should be created through the reception panel or API
-    // No default patients are seeded
+    // Seed sample patients (check if they already exist)
+    const patients = [
+      { salutation: 'Mr.', name: 'Rajesh Kumar', age_years: 45, age_months: 0, age_days: 0, sex: 'M', phone: '9876543210', address: '123 Main St, City', email: 'rajesh@example.com', clinical_history: 'Diabetes' },
+      { salutation: 'Ms.', name: 'Priya Singh', age_years: 32, age_months: 6, age_days: 0, sex: 'F', phone: '9876543211', address: '456 Oak Ave, City', email: 'priya@example.com', clinical_history: 'Hypertension' },
+      { salutation: 'Mr.', name: 'Amit Patel', age_years: 28, age_months: 3, age_days: 15, sex: 'M', phone: '9876543212', address: '789 Pine Rd, City', email: 'amit@example.com', clinical_history: 'None' },
+      { salutation: 'Ms.', name: 'Neha Sharma', age_years: 55, age_months: 0, age_days: 0, sex: 'F', phone: '9876543213', address: '321 Elm St, City', email: 'neha@example.com', clinical_history: 'Thyroid' },
+      { salutation: 'Mr.', name: 'Vikram Desai', age_years: 38, age_months: 9, age_days: 0, sex: 'M', phone: '9876543214', address: '654 Maple Dr, City', email: 'vikram@example.com', clinical_history: 'Cholesterol' },
+    ];
+
+    const patientResults = [];
+    for (const patient of patients) {
+      // Check if patient already exists
+      const existingPatient = await client.query(
+        `SELECT id FROM patients WHERE name = $1 AND phone = $2`,
+        [patient.name, patient.phone]
+      );
+
+      if (existingPatient.rows.length > 0) {
+        patientResults.push(existingPatient.rows[0].id);
+      } else {
+        const result = await client.query(
+          `INSERT INTO patients (salutation, name, age_years, age_months, age_days, sex, phone, address, email, clinical_history)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+           RETURNING id`,
+          [patient.salutation, patient.name, patient.age_years, patient.age_months, patient.age_days, patient.sex, patient.phone, patient.address, patient.email, patient.clinical_history]
+        );
+        patientResults.push(result.rows[0].id);
+      }
+    }
+
+    // Seed sample visits (check if they already exist)
+    const visits = [
+      { patient_id: patientResults[0], total_cost: 1500, amount_paid: 1500, payment_mode: 'Cash', test_ids: [1, 2] },
+      { patient_id: patientResults[1], total_cost: 2000, amount_paid: 1000, payment_mode: 'Card', test_ids: [3, 4] },
+      { patient_id: patientResults[2], total_cost: 1200, amount_paid: 1200, payment_mode: 'UPI', test_ids: [1, 5] },
+      { patient_id: patientResults[3], total_cost: 2500, amount_paid: 2500, payment_mode: 'Cash', test_ids: [2, 3, 6] },
+      { patient_id: patientResults[4], total_cost: 1800, amount_paid: 1800, payment_mode: 'Card', test_ids: [4, 7] },
+    ];
+
+    const visitResults = [];
+    for (let i = 0; i < visits.length; i++) {
+      const visit = visits[i];
+      const visitCode = `LAB-${new Date().getFullYear()}-${String(i + 1).padStart(4, '0')}`;
+
+      // Check if visit already exists
+      const existingVisit = await client.query(
+        `SELECT id FROM visits WHERE visit_code = $1`,
+        [visitCode]
+      );
+
+      if (existingVisit.rows.length > 0) {
+        visitResults.push({ id: existingVisit.rows[0].id, test_ids: visit.test_ids });
+      } else {
+        const result = await client.query(
+          `INSERT INTO visits (patient_id, visit_code, total_cost, amount_paid, payment_mode, due_amount)
+           VALUES ($1, $2, $3, $4, $5, $6)
+           RETURNING id`,
+          [visit.patient_id, visitCode, visit.total_cost, visit.amount_paid, visit.payment_mode, visit.total_cost - visit.amount_paid]
+        );
+        visitResults.push({ id: result.rows[0].id, test_ids: visit.test_ids });
+      }
+    }
+
+    // Seed sample visit tests with various statuses (check if they already exist)
+    const testStatuses = ['PENDING', 'SAMPLE_COLLECTED', 'IN_PROGRESS', 'AWAITING_APPROVAL', 'APPROVED'];
+    let testIndex = 0;
+    for (const visit of visitResults) {
+      for (const testTemplateId of visit.test_ids) {
+        // Check if this visit test already exists
+        const existingTest = await client.query(
+          `SELECT id FROM visit_tests WHERE visit_id = $1 AND test_template_id = $2`,
+          [visit.id, testTemplateId]
+        );
+
+        if (existingTest.rows.length > 0) {
+          testIndex++;
+          continue;
+        }
+
+        const status = testStatuses[testIndex % testStatuses.length];
+        const collectedAt = status !== 'PENDING' ? new Date().toISOString() : null;
+        const approvedAt = status === 'APPROVED' ? new Date().toISOString() : null;
+
+        // Add sample results for APPROVED tests
+        let results = null;
+        if (status === 'APPROVED') {
+          // Get the test template to know what parameters to add
+          const templateResult = await client.query('SELECT parameters FROM test_templates WHERE id = $1', [testTemplateId]);
+          if (templateResult.rows.length > 0) {
+            const template = templateResult.rows[0];
+            const parameters = typeof template.parameters === 'string' ? JSON.parse(template.parameters) : template.parameters;
+
+            // Create sample results for each parameter
+            if (parameters.fields && parameters.fields.length > 0) {
+              results = {};
+              parameters.fields.forEach((field: any) => {
+                if (field.type === 'number') {
+                  results[field.name] = Math.floor(Math.random() * 100) + 1;
+                } else {
+                  results[field.name] = 'Normal';
+                }
+              });
+            }
+          }
+        }
+
+        await client.query(
+          `INSERT INTO visit_tests (visit_id, test_template_id, status, collected_by, collected_at, approved_by, approved_at, results)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          [visit.id, testTemplateId, status, status !== 'PENDING' ? 'phlebotomist' : null, collectedAt, status === 'APPROVED' ? 'approver' : null, approvedAt, results ? JSON.stringify(results) : null]
+        );
+        testIndex++;
+      }
+    }
+
+    // Seed B2B Client Logins (check if clients exist and set up login credentials)
+    const clientsResult = await client.query('SELECT id FROM clients WHERE type = $1', ['REFERRAL_LAB']);
+
+    if (clientsResult.rows.length > 0) {
+      for (const clientRow of clientsResult.rows) {
+        const clientId = clientRow.id;
+
+        // Check if login already exists
+        const loginCheck = await client.query(
+          'SELECT id FROM b2b_client_logins WHERE client_id = $1',
+          [clientId]
+        );
+
+        if (loginCheck.rows.length === 0) {
+          // Create default password: client_<id>
+          const defaultPassword = `client_${clientId}`;
+          const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+
+          await client.query(
+            'INSERT INTO b2b_client_logins (client_id, password_hash, is_active) VALUES ($1, $2, $3)',
+            [clientId, hashedPassword, true]
+          );
+          console.log(`✅ B2B login set up for client ${clientId} with password: ${defaultPassword}`);
+        }
+      }
+    }
 
     await client.query('COMMIT');
-    console.log('✅ Database seeded successfully!');
+    console.log('✅ Database seeded successfully with sample data!');
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('❌ Error seeding database:', error);

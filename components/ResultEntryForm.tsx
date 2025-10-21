@@ -25,20 +25,24 @@ const StandardResultForm: React.FC<{ test: VisitTest, onClose: () => void, isEdi
         }));
     };
 
-    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!user) {
             alert("User session has expired. Please log in again.");
             return;
         };
+        if (!isEditMode && test.status !== 'SAMPLE_COLLECTED') {
+            alert(`Cannot enter results. Test status is ${test.status}. Only SAMPLE_COLLECTED tests can have results entered.`);
+            return;
+        }
         if (isEditMode) {
             if (!editReason) {
                 alert("Cannot save edit without a reason.");
                 return;
             }
-            editTestResult(test.id, { results }, editReason, user);
+            await editTestResult(test.id, { results }, editReason, user);
         } else {
-            addTestResult(test.id, { results }, user);
+            await addTestResult(test.id, { results }, user);
         }
         onClose();
     };
@@ -72,7 +76,7 @@ const StandardResultForm: React.FC<{ test: VisitTest, onClose: () => void, isEdi
                 <p className="text-sm text-gray-500 mt-1">Patient: {test.patientName} ({test.visitCode})</p>
                 {isEditMode && <p className="text-sm text-yellow-700 bg-yellow-100 p-2 rounded-md mt-2">Reason for edit: {editReason}</p>}
                 <div className="mt-6 space-y-4">
-                    {test.template.parameters.fields.length > 0 ? (
+                    {test.template.parameters?.fields && test.template.parameters.fields.length > 0 ? (
                         test.template.parameters.fields.map(renderField)
                     ) : (
                         <p className="text-sm text-center text-gray-500 py-4">This test does not require detailed parameter entry. You can add remarks if needed.</p>
@@ -145,20 +149,24 @@ const CultureResultForm: React.FC<{ test: VisitTest, onClose: () => void, isEdit
         }));
     };
 
-    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if(!user) {
             alert("User session has expired. Please log in again.");
             return;
         };
+        if (!isEditMode && test.status !== 'SAMPLE_COLLECTED') {
+            alert(`Cannot enter results. Test status is ${test.status}. Only SAMPLE_COLLECTED tests can have results entered.`);
+            return;
+        }
         if (isEditMode) {
             if (!editReason) {
                 alert("Cannot save edit without a reason.");
                 return;
             }
-            editTestResult(test.id, { cultureResult: formData }, editReason, user);
+            await editTestResult(test.id, { cultureResult: formData }, editReason, user);
         } else {
-            addTestResult(test.id, { cultureResult: formData }, user);
+            await addTestResult(test.id, { cultureResult: formData }, user);
         }
         onClose();
     };

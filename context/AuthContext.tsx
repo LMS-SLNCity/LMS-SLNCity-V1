@@ -17,7 +17,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = async (username: string, password_hash: string): Promise<void> => {
     try {
       const response = await apiClient.login(username, password_hash);
-      if (response && response.user) {
+      if (response && response.user && response.token) {
+        // Store token in localStorage for API requests
+        localStorage.setItem('authToken', response.token);
         setUser(response.user);
       } else {
         throw new Error('Invalid response from server');
@@ -28,6 +30,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const logout = useCallback(() => {
+    // Clear token from localStorage
+    localStorage.removeItem('authToken');
     setUser(null);
   }, []);
 

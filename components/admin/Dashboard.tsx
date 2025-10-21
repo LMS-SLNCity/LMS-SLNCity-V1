@@ -46,6 +46,9 @@ export const Dashboard: React.FC = () => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
+        setError(null);
+        console.log('🔄 Fetching dashboard data...');
+
         const [metricsData, revenueData, testsData, clientsData, trendsData] = await Promise.all([
           apiClient.getDashboardOverview(),
           apiClient.getDashboardRevenue(),
@@ -54,14 +57,22 @@ export const Dashboard: React.FC = () => {
           apiClient.getDashboardTrends(),
         ]);
 
+        console.log('✅ Dashboard data fetched:', {
+          metrics: metricsData,
+          revenue: revenueData,
+          tests: testsData,
+          clients: clientsData,
+          trends: trendsData,
+        });
+
         setMetrics(metricsData);
         setRevenue(revenueData);
         setTests(testsData);
         setClients(clientsData);
         setTrends(trendsData);
       } catch (err) {
-        console.error('Error fetching dashboard data:', err);
-        setError('Failed to load dashboard data');
+        console.error('❌ Error fetching dashboard data:', err);
+        setError('Failed to load dashboard data: ' + (err instanceof Error ? err.message : String(err)));
       } finally {
         setLoading(false);
       }
@@ -91,12 +102,12 @@ export const Dashboard: React.FC = () => {
       {/* Overview Metrics */}
       {metrics && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <MetricCard title="Total Visits" value={metrics.totalVisits} icon="📋" />
-          <MetricCard title="Total Revenue" value={`₹${metrics.totalRevenue.toFixed(2)}`} icon="💰" />
-          <MetricCard title="Total Tests" value={metrics.totalTests} icon="🧪" />
-          <MetricCard title="B2B Clients" value={metrics.totalClients} icon="🏢" />
-          <MetricCard title="Pending Tests" value={metrics.pendingTests} icon="⏳" color="orange" />
-          <MetricCard title="Approved Tests" value={metrics.approvedTests} icon="✅" color="green" />
+          <MetricCard title="Total Visits" value={metrics.totalVisits} color="blue" />
+          <MetricCard title="Total Revenue" value={`₹${metrics.totalRevenue.toFixed(2)}`} color="blue" />
+          <MetricCard title="Total Tests" value={metrics.totalTests} color="blue" />
+          <MetricCard title="B2B Clients" value={metrics.totalClients} color="blue" />
+          <MetricCard title="Pending Tests" value={metrics.pendingTests} color="orange" />
+          <MetricCard title="Approved Tests" value={metrics.approvedTests} color="green" />
         </div>
       )}
 
@@ -171,12 +182,21 @@ export const Dashboard: React.FC = () => {
             <div>
               <h4 className="font-medium text-gray-700 mb-3">Top Tests</h4>
               <div className="space-y-2">
-                {tests.byTemplate.slice(0, 5).map((item, idx) => (
-                  <div key={idx} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                    <span className="text-sm text-gray-600">{item.name}</span>
-                    <span className="font-medium">{item.count}</span>
-                  </div>
-                ))}
+                {tests.byTemplate.slice(0, 5).map((item, idx) => {
+                  const params = typeof item.parameters === 'string' ? JSON.parse(item.parameters) : item.parameters;
+                  const fieldCount = params?.fields?.length || 0;
+                  return (
+                    <div key={idx} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                      <div className="flex-1">
+                        <span className="text-sm text-gray-600 font-medium">{item.name}</span>
+                        {fieldCount > 0 && (
+                          <p className="text-xs text-gray-500 mt-1">{fieldCount} parameters</p>
+                        )}
+                      </div>
+                      <span className="font-medium text-blue-600">{item.count}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -253,27 +273,38 @@ export const Dashboard: React.FC = () => {
 };
 
 // Metric Card Component
-const MetricCard: React.FC<{ title: string; value: string | number; icon: string; color?: string }> = ({
+const MetricCard: React.FC<{ title: string; value: string | number; color?: string }> = ({
   title,
   value,
-  icon,
   color = 'blue',
 }) => {
   const colorClasses = {
-    blue: 'bg-blue-50 border-blue-200',
-    orange: 'bg-orange-50 border-orange-200',
-    green: 'bg-green-50 border-green-200',
+    blue: {
+      bg: 'bg-gradient-to-br from-blue-50 to-blue-100',
+      border: 'border-blue-200',
+      title: 'text-blue-700',
+      value: 'text-blue-900',
+    },
+    orange: {
+      bg: 'bg-gradient-to-br from-orange-50 to-orange-100',
+      border: 'border-orange-200',
+      title: 'text-orange-700',
+      value: 'text-orange-900',
+    },
+    green: {
+      bg: 'bg-gradient-to-br from-green-50 to-green-100',
+      border: 'border-green-200',
+      title: 'text-green-700',
+      value: 'text-green-900',
+    },
   };
 
+  const colors = colorClasses[color as keyof typeof colorClasses];
+
   return (
-    <div className={`${colorClasses[color as keyof typeof colorClasses]} border rounded-lg p-6`}>
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-gray-600 mb-1">{title}</p>
-          <p className="text-2xl font-bold text-gray-800">{value}</p>
-        </div>
-        <div className="text-4xl">{icon}</div>
-      </div>
+    <div className={`${colors.bg} border ${colors.border} rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow`}>
+      <p className={`text-sm font-medium ${colors.title} mb-2`}>{title}</p>
+      <p className={`text-3xl font-bold ${colors.value}`}>{value}</p>
     </div>
   );
 };
