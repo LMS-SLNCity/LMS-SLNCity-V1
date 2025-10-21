@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Client } from '../../types';
 import { useAppContext } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
@@ -8,90 +8,118 @@ interface ClientPriceEditorModalProps {
   onClose: () => void;
 }
 
-type PriceEditState = {
-    [testTemplateId: number]: string;
-};
-
 export const ClientPriceEditorModal: React.FC<ClientPriceEditorModalProps> = ({ client, onClose }) => {
-    const { testTemplates, clientPrices, updateClientPrices } = useAppContext();
-    const { user: actor } = useAuth();
-    const [prices, setPrices] = useState<PriceEditState>({});
+  const { testTemplates, clientPrices, updateClientPrices } = useAppContext();
+  const { user: actor } = useAuth();
+  const [prices, setPrices] = useState<Record<number, string>>(() => {
+    const initialPrices: Record<number, string> = {};
+    testTemplates.forEach(test => {
+      const clientPrice = clientPrices.find(p => p.clientId === client.id && p.testTemplateId === test.id);
+      initialPrices[test.id] = clientPrice ? clientPrice.price.toString() : test.b2b_price.toString();
+    });
+    return initialPrices;
+  });
 
-    useEffect(() => {
-        const initialPrices = clientPrices
-            .filter(p => p.clientId === client.id)
-            .reduce((acc, p) => {
-                acc[p.testTemplateId] = String(p.price);
-                return acc;
-            }, {} as PriceEditState);
-        setPrices(initialPrices);
-    }, [clientPrices, client.id]);
+  const [isSaving, setIsSaving] = useState(false);
 
-    const handleChange = (testTemplateId: number, value: string) => {
-        setPrices(prev => ({ ...prev, [testTemplateId]: value }));
-    };
+  const handlePriceChange = (testId: number, value: string) => {
+    setPrices((prev: Record<number, string>) => ({
+      ...prev,
+      [testId]: value
+    }));
+  };
 
-    const handleSave = () => {
-        if (!actor) {
-            alert("User session has expired. Please log in again.");
-            return;
-        }
-        const pricesToUpdate = Object.entries(prices)
-            .map(([testTemplateId, price]) => ({
-                testTemplateId: Number(testTemplateId),
-                price: Number(price)
-            }))
-            .filter(p => !isNaN(p.price));
-            
-        updateClientPrices(client.id, pricesToUpdate, actor);
-        onClose();
-    };
+  const handleSave = async () => {
+    if (!actor) {
+      alert('User session expired');
+      return;
+    }
 
-    const activeTemplates = testTemplates.filter(t => t.isActive);
+    setIsSaving(true);
+    try {
+      const pricesToUpdate = Object.entries(prices)
+        .map(([testId, price]) => ({
+          testTemplateId: parseInt(testId),
+          price: parseFloat(price) || 0
+        }))
+        .filter(p => p.price > 0);
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl transform transition-all max-h-[90vh] flex flex-col">
-                <div className="p-6 border-b border-gray-200">
-                    <h3 className="text-xl font-bold text-gray-900" id="modal-title">
-                        Custom Price List for {client.name}
-                    </h3>
-                     <p className="text-sm text-gray-500 mt-1">
-                        Leave a price blank to use the default B2B price for that test.
-                    </p>
+      updateClientPrices(client.id, pricesToUpdate, actor);
+      alert('Prices updated successfully');
+      onClose();
+    } catch (error) {
+      console.error('Failed to update prices:', error);
+      alert('Failed to update prices');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const activeTests = testTemplates.filter(t => t.isActive);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
+        <h3 className="text-lg font-bold text-gray-900 mb-2">Custom Prices for {client.name}</h3>
+        <p className="text-sm text-gray-600 mb-6">Set custom prices for this B2B client. Leave blank to use default B2B price.</p>
+
+        <div className="space-y-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-semibold text-gray-600 uppercase tracking-wider pb-2 border-b">
+            <div>Test Name</div>
+            <div className="grid grid-cols-3 gap-2">
+              <div>Default B2B</div>
+              <div>Custom Price</div>
+              <div>Savings</div>
+            </div>
+          </div>
+
+          {activeTests.map(test => {
+            const customPrice = parseFloat(prices[test.id]) || test.b2b_price;
+            const savings = test.b2b_price - customPrice;
+            const savingsPercent = ((savings / test.b2b_price) * 100).toFixed(1);
+
+            return (
+              <div key={test.id} className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center p-3 bg-gray-50 rounded-lg">
+                <div>
+                  <p className="font-medium text-gray-800">{test.name}</p>
+                  <p className="text-xs text-gray-500">{test.code}</p>
                 </div>
-                
-                <div className="p-6 overflow-y-auto flex-grow">
-                     <div className="overflow-x-auto border border-gray-200 rounded-lg">
-                        <table className="min-w-full bg-white">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Test Name</th>
-                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Default B2B Price (₹)</th>
-                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Custom Price (₹)</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-200">
-                                {activeTemplates.map((template, index) => (
-                                    <tr key={template.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50 hover:bg-gray-100'}>
-                                        <td className="px-4 py-2 text-sm font-medium text-gray-800">{template.name}</td>
-                                        <td className="px-4 py-2 text-sm text-gray-600">{template.b2b_price.toFixed(2)}</td>
-                                        <td className="px-4 py-2">
-                                             <input 
-                                                type="number"
-                                                placeholder="Use Default"
-                                                value={prices[template.id] || ''}
-                                                onChange={(e) => handleChange(template.id, e.target.value)}
-                                                className="w-32 px-2 py-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary sm:text-sm"
-                                            />
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="text-sm font-semibold text-gray-700">₹{test.b2b_price.toFixed(2)}</div>
+                  <input
+                    type="number"
+                    value={prices[test.id]}
+                    onChange={(e) => handlePriceChange(test.id, e.target.value)}
+                    placeholder={test.b2b_price.toString()}
+                    className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                    disabled={isSaving}
+                  />
+                  <div className={`text-sm font-semibold ${savings > 0 ? 'text-green-600' : 'text-gray-600'}`}>
+                    {savings > 0 ? `₹${savings.toFixed(2)} (${savingsPercent}%)` : '-'}
+                  </div>
                 </div>
+              </div>
+            );
+          })}
+        </div>
 
-                <div className="bg-gray-50 px-6 py-4 flex justify-end items-center space-x-3 rounded-b-2xl border-t border-gray-200">
-                    <button type="button" onClick={onClose} className="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50">
-                        Cancel
+        <div className="flex gap-3 justify-end">
+          <button
+            onClick={onClose}
+            disabled={isSaving}
+            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={isSaving}
+            className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary-dark disabled:opacity-50"
+          >
+            {isSaving ? 'Saving...' : 'Save Prices'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};

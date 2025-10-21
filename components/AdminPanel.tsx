@@ -8,8 +8,12 @@ import { RoleManagement } from './admin/RoleManagement';
 import { useAuth } from '../context/AuthContext';
 import { AuditLogViewer } from './admin/AuditLogViewer';
 import { AntibioticManagement } from './admin/AntibioticManagement';
+import { ReferralDoctorManagement } from './admin/ReferralDoctorManagement';
+import { Dashboard } from './admin/Dashboard';
+import { ApproverManagement } from './admin/ApproverManagement';
+import { BranchManagement } from './admin/BranchManagement';
 
-type AdminTab = 'users' | 'roles' | 'tests' | 'pricing' | 'b2b' | 'audit' | 'antibiotics';
+type AdminTab = 'dashboard' | 'users' | 'roles' | 'tests' | 'pricing' | 'b2b' | 'referral_doctors' | 'approvers' | 'branches' | 'audit' | 'antibiotics';
 
 interface AdminPanelProps {
     user: User;
@@ -39,12 +43,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
 
     const availableTabs = useMemo(() => {
         const tabs: {name: AdminTab, label: string, permission: Permission}[] = [];
+        tabs.push({name: 'dashboard', label: 'Dashboard', permission: 'MANAGE_USERS'});
         if(hasPermission('MANAGE_USERS')) tabs.push({name: 'users', label: 'User Management', permission: 'MANAGE_USERS'});
+        if(hasPermission('MANAGE_USERS')) tabs.push({name: 'approvers', label: 'Approvers & Signatures', permission: 'MANAGE_USERS'});
+        if(hasPermission('MANAGE_USERS')) tabs.push({name: 'branches', label: 'Branch Management', permission: 'MANAGE_USERS'});
         if(hasPermission('MANAGE_ROLES')) tabs.push({name: 'roles', label: 'Role Management', permission: 'MANAGE_ROLES'});
         if(hasPermission('MANAGE_TESTS')) tabs.push({name: 'tests', label: 'Test Management', permission: 'MANAGE_TESTS'});
         if(hasPermission('MANAGE_ANTIBIOTICS')) tabs.push({name: 'antibiotics', label: 'Manage Antibiotics', permission: 'MANAGE_ANTIBIOTICS'});
         if(hasPermission('MANAGE_PRICES')) tabs.push({name: 'pricing', label: 'Price Management', permission: 'MANAGE_PRICES'});
         if(hasPermission('MANAGE_B2B')) tabs.push({name: 'b2b', label: 'B2B Management', permission: 'MANAGE_B2B'});
+        if(hasPermission('MANAGE_B2B')) tabs.push({name: 'referral_doctors', label: 'Referral Doctors', permission: 'MANAGE_B2B'});
         if(hasPermission('VIEW_AUDIT_LOG')) tabs.push({name: 'audit', label: 'Audit Log', permission: 'VIEW_AUDIT_LOG'});
         return tabs;
     }, [user, hasPermission]);
@@ -64,12 +72,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
       </div>
 
       <div className="mt-8">
+        {activeTab === 'dashboard' && <Dashboard />}
         {activeTab === 'users' && hasPermission('MANAGE_USERS') && <UserManagement />}
+        {activeTab === 'approvers' && hasPermission('MANAGE_USERS') && <ApproverManagement />}
+        {activeTab === 'branches' && hasPermission('MANAGE_USERS') && <BranchManagement />}
         {activeTab === 'roles' && hasPermission('MANAGE_ROLES') && <RoleManagement />}
         {activeTab === 'tests' && hasPermission('MANAGE_TESTS') && <TestTemplateManagement />}
         {activeTab === 'antibiotics' && hasPermission('MANAGE_ANTIBIOTICS') && <AntibioticManagement />}
         {activeTab === 'pricing' && hasPermission('MANAGE_PRICES') && <PriceManagement />}
         {activeTab === 'b2b' && hasPermission('MANAGE_B2B') && <B2BManagement />}
+        {activeTab === 'referral_doctors' && hasPermission('MANAGE_B2B') && <ReferralDoctorManagement />}
         {activeTab === 'audit' && hasPermission('VIEW_AUDIT_LOG') && <AuditLogViewer />}
       </div>
     </div>
