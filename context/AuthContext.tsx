@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
 import { User, Permission } from '../types';
-import { mockUsers } from '../api/mock';
+import { apiClient } from '../api/client';
 
 interface AuthContextType {
   user: User | null;
@@ -15,20 +15,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
 
   const login = async (username: string, password_hash: string): Promise<void> => {
-    return new Promise((resolve, reject) => {
-        setTimeout(() => { // Simulate network delay
-            const foundUser = mockUsers.find(
-                u => u.username.toLowerCase() === username.toLowerCase() && u.password_hash === password_hash
-            );
-            if (foundUser) {
-                const { password_hash, ...userToStore } = foundUser;
-                setUser(userToStore);
-                resolve();
-            } else {
-                reject(new Error('Invalid username or password'));
-            }
-        }, 500);
-    });
+    try {
+      const response = await apiClient.login(username, password_hash);
+      if (response && response.user) {
+        setUser(response.user);
+      } else {
+        throw new Error('Invalid response from server');
+      }
+    } catch (error) {
+      throw new Error(error instanceof Error ? error.message : 'Login failed');
+    }
   };
 
   const logout = useCallback(() => {

@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import type { Visit, VisitTest, Patient, TestTemplate, VisitTestStatus, User, Role, UserWithPassword, Client, ClientPrice, LedgerEntry, RolePermissions, Permission, CultureResult, AuditLog, Antibiotic } from '../types';
-import { mockTestTemplates, mockUsers, mockClients, mockClientPrices, mockLedgerEntries, mockRolePermissions, mockAuditLogs, mockAntibiotics, mockPatients } from '../api/mock';
 
 // Define a type for user creation data to avoid exposing password hash elsewhere
 type UserCreationData = Omit<User, 'id' | 'isActive' | 'permissions'> & { password_hash: string };
@@ -75,15 +74,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [state, setState] = useState<AppState>({
     visits: [],
     visitTests: [],
-    users: mockUsers,
-    testTemplates: mockTestTemplates,
-    clients: mockClients,
-    clientPrices: mockClientPrices,
-    ledgerEntries: mockLedgerEntries,
-    rolePermissions: mockRolePermissions,
-    auditLogs: mockAuditLogs,
-    antibiotics: mockAntibiotics,
-    patients: mockPatients,
+    users: [],
+    testTemplates: [],
+    clients: [],
+    clientPrices: [],
+    ledgerEntries: [],
+    rolePermissions: {},
+    auditLogs: [],
+    antibiotics: [],
+    patients: [],
   });
   
   const addAuditLog = (username: string, action: string, details: string) => {
