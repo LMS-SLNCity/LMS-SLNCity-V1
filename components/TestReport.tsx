@@ -2,6 +2,7 @@ import React from 'react';
 import { VisitTest, Visit, Signatory } from '../types';
 import { useAppContext } from '../context/AppContext';
 import { MicrobiologyReportDisplay } from './MicrobiologyReportDisplay';
+import QRCode from 'qrcode.react';
 
 interface TestReportProps {
   visit: Visit;
@@ -198,9 +199,13 @@ export const TestReport: React.FC<TestReportProps> = ({ visit, signatory, canEdi
             )}
             <div className="mt-8 pt-8 border-t-2 border-gray-300 flex flex-col items-center text-xs">
                  <div className="flex justify-center items-center flex-col mb-8">
-                     <svg viewBox="0 0 100 100" className="w-20 h-20">
-                        <path d="M0 0h30v30H0z M10 10h10v10H10z M70 0h30v30H70z M80 10h10v10H80z M0 70h30v30H0z M10 80h10v10H10z M40 0h10v10H40z M60 0h10v10H60z M0 40h10v10H0z M0 60h10v10H0z M90 40h10v10H90z M90 60h10v10H90z M40 90h10v10H40z M60 90h10v10H60z M40 40h30v10H40z M40 60h10v10H40z M60 60h10v10H60z M70 40h10v30H70z M40 70h30v10H40z M20 20h10v10H20z M20 40h10v10H20z M40 20h10v10H40z M20 60h10v10H20z M60 20h10v10H60z M60 40h10v10H60z" fill="#0f172a"/>
-                     </svg>
+                     <QRCode
+                       value={`${window.location.origin}/verify-report/${visit.visit_code}`}
+                       size={128}
+                       level="H"
+                       includeMargin={true}
+                       className="w-20 h-20"
+                     />
                     <p className="text-xxs mt-1 text-gray-700">Scan to verify report for Visit ID: {visit.visit_code}</p>
                 </div>
                 
