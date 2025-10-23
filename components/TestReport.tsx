@@ -2,7 +2,7 @@ import React from 'react';
 import { VisitTest, Visit, Signatory } from '../types';
 import { useAppContext } from '../context/AppContext';
 import { MicrobiologyReportDisplay } from './MicrobiologyReportDisplay';
-import QRCode from 'qrcode.react';
+import { QRCodeSVG } from 'qrcode.react';
 
 interface TestReportProps {
   visit: Visit;
@@ -199,7 +199,7 @@ export const TestReport: React.FC<TestReportProps> = ({ visit, signatory, canEdi
             )}
             <div className="mt-8 pt-8 border-t-2 border-gray-300 flex flex-col items-center text-xs">
                  <div className="flex justify-center items-center flex-col mb-8">
-                     <QRCode
+                     <QRCodeSVG
                        value={`${window.location.origin}/verify-report/${visit.visit_code}`}
                        size={128}
                        level="H"
