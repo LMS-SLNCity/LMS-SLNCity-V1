@@ -94,10 +94,10 @@ router.get('/tests', async (req: Request, res: Response) => {
   try {
     // Get tests by template
     const byTemplateResult = await pool.query(`
-      SELECT tt.id, tt.name, tt.code, COUNT(vt.id) as count
+      SELECT tt.id, tt.name, tt.code, tt.category, tt.parameters, COUNT(vt.id) as count
       FROM test_templates tt
       LEFT JOIN visit_tests vt ON tt.id = vt.test_template_id
-      GROUP BY tt.id, tt.name, tt.code
+      GROUP BY tt.id, tt.name, tt.code, tt.category, tt.parameters
       ORDER BY count DESC
     `);
 

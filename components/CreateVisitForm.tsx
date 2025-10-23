@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { Patient, Salutation, Sex, Visit, VisitTest } from '../types';
-import { mockReferralDoctors } from '../api/mock';
 import { Input } from './form/Input';
 import { Select } from './form/Select';
 import { useAppContext } from '../context/AppContext';
@@ -128,6 +127,7 @@ export const CreateVisitForm: React.FC<CreateVisitFormProps> = ({ onInitiateRepo
   const [searchQuery, setSearchQuery] = useState('');
   const [isPatientLoaded, setIsPatientLoaded] = useState(false);
   const [testSearchQuery, setTestSearchQuery] = useState('');
+  const [referralDoctors, setReferralDoctors] = useState<any[]>([]);
   const [isB2BClient, setIsB2BClient] = useState(false);
   const [visitToCollectDue, setVisitToCollectDue] = useState<Visit | null>(null);
   const lastSubmittedVisit = useMemo(() => submissionStatus === 'submitted' && visits.length > 0 ? visits[visits.length - 1] : null, [visits, submissionStatus]);
@@ -153,6 +153,18 @@ export const CreateVisitForm: React.FC<CreateVisitFormProps> = ({ onInitiateRepo
     setSexDisabled(sexDisabled);
     setGuardianVisible(guardianVisible);
   }, [formData.salutation]);
+
+  useEffect(() => {
+    const fetchReferralDoctors = async () => {
+      try {
+        const data = await (window as any).apiClient?.getReferralDoctors?.() || [];
+        setReferralDoctors(data);
+      } catch (error) {
+        console.error('Failed to fetch referral doctors:', error);
+      }
+    };
+    fetchReferralDoctors();
+  }, []);
   
   const totalCost = useMemo(() => {
     const selectedClientId = formData.ref_customer_id;
@@ -274,7 +286,7 @@ export const CreateVisitForm: React.FC<CreateVisitFormProps> = ({ onInitiateRepo
   }
 
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!actor) {
@@ -286,9 +298,9 @@ export const CreateVisitForm: React.FC<CreateVisitFormProps> = ({ onInitiateRepo
         alert("Please select at least one test.");
         return;
     }
-    
+
     const { age, age_unit, ...restOfForm } = formData;
-    
+
     const newVisitData = {
         patient: {
             salutation: restOfForm.salutation,
@@ -314,8 +326,14 @@ export const CreateVisitForm: React.FC<CreateVisitFormProps> = ({ onInitiateRepo
         payment_mode: isB2BClient ? '' : restOfForm.payment_mode,
     };
 
-    addVisit(newVisitData, actor);
-    setSubmissionStatus('submitted');
+    try {
+      await addVisit(newVisitData, actor);
+      setSubmissionStatus('submitted');
+    } catch (error) {
+      console.error('Failed to create visit:', error);
+      alert('Failed to create visit. Please try again.');
+      setSubmissionStatus('error');
+    }
   };
 
   const handleCollectDueSuccess = (visitId: number, amount: number, mode: PaymentMode) => {
@@ -428,7 +446,7 @@ export const CreateVisitForm: React.FC<CreateVisitFormProps> = ({ onInitiateRepo
 
                     {isGuardianVisible && <Input name="guardian_name" label="Guardian Name" value={formData.guardian_name || ''} onChange={handleChange} required={isGuardianVisible} className="sm:col-span-12"/>}
 
-                    <Select name="referred_doctor_id" label="Ref Doctor" value={String(formData.referred_doctor_id || '')} onChange={handleChange} options={[{label: '--Select Doctor--', value: ''}, ...mockReferralDoctors.map(d => ({ label: d.name, value: d.id }))]} className="sm:col-span-6"/>
+                    <Select name="referred_doctor_id" label="Ref Doctor" value={String(formData.referred_doctor_id || '')} onChange={handleChange} options={[{label: '--Select Doctor--', value: ''}, ...referralDoctors.map(d => ({ label: d.name, value: d.id }))]} className="sm:col-span-6"/>
                     <Select name="ref_customer_id" label="B2B Client / Customer" value={String(formData.ref_customer_id || '')} onChange={handleChange} options={[{label: '--Select Customer--', value: ''}, ...clients.map(c => ({ label: c.name, value: c.id }))]} className="sm:col-span-6"/>
                     
                     <Input name="other_ref_doctor" label="Other Ref. Doctor" value={formData.other_ref_doctor || ''} onChange={handleChange} className="sm:col-span-6"/>

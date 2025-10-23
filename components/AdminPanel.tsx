@@ -12,38 +12,29 @@ import { ReferralDoctorManagement } from './admin/ReferralDoctorManagement';
 import { Dashboard } from './admin/Dashboard';
 import { ApproverManagement } from './admin/ApproverManagement';
 import { BranchManagement } from './admin/BranchManagement';
+import { VisitsManagement } from './admin/VisitsManagement';
 
-type AdminTab = 'dashboard' | 'users' | 'roles' | 'tests' | 'pricing' | 'b2b' | 'referral_doctors' | 'approvers' | 'branches' | 'audit' | 'antibiotics';
+type AdminTab = 'dashboard' | 'users' | 'roles' | 'tests' | 'pricing' | 'b2b' | 'referral_doctors' | 'approvers' | 'branches' | 'audit' | 'antibiotics' | 'visits';
 
 interface AdminPanelProps {
     user: User;
 }
 
-const TabButton: React.FC<{
+interface TabOption {
+    name: AdminTab;
     label: string;
-    tabName: AdminTab;
-    activeTab: AdminTab;
-    onClick: (tab: AdminTab) => void;
-}> = ({ label, tabName, activeTab, onClick }) => (
-    <button
-        onClick={() => onClick(tabName)}
-        className={`px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
-            activeTab === tabName 
-            ? 'border-brand-primary text-brand-primary'
-            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-        }`}
-    >
-        {label}
-    </button>
-);
+    permission: Permission;
+}
 
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
     const { hasPermission } = useAuth();
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-    const availableTabs = useMemo(() => {
-        const tabs: {name: AdminTab, label: string, permission: Permission}[] = [];
+    const allTabs = useMemo(() => {
+        const tabs: TabOption[] = [];
         tabs.push({name: 'dashboard', label: 'Dashboard', permission: 'MANAGE_USERS'});
+        tabs.push({name: 'visits', label: 'Visits', permission: 'VIEW_RECEPTION'});
         if(hasPermission('MANAGE_USERS')) tabs.push({name: 'users', label: 'User Management', permission: 'MANAGE_USERS'});
         if(hasPermission('MANAGE_USERS')) tabs.push({name: 'approvers', label: 'Approvers & Signatures', permission: 'MANAGE_USERS'});
         if(hasPermission('MANAGE_USERS')) tabs.push({name: 'branches', label: 'Branch Management', permission: 'MANAGE_USERS'});
@@ -57,22 +48,88 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
         return tabs;
     }, [user, hasPermission]);
 
+    // Most used tabs - shown as direct buttons
+    const frequentTabs = useMemo(() => {
+        return allTabs.filter(tab => ['dashboard', 'visits', 'users', 'tests', 'pricing'].includes(tab.name));
+    }, [allTabs]);
 
-    const [activeTab, setActiveTab] = useState<AdminTab>(availableTabs[0]?.name || 'tests');
-  
+    // Less used tabs - shown in dropdown
+    const dropdownTabs = useMemo(() => {
+        return allTabs.filter(tab => !['dashboard', 'visits', 'users', 'tests', 'pricing'].includes(tab.name));
+    }, [allTabs]);
+
+    const [activeTab, setActiveTab] = useState<AdminTab>(allTabs[0]?.name || 'dashboard');
+
+    const handleTabSelect = (tabName: AdminTab) => {
+        setActiveTab(tabName);
+        setIsDropdownOpen(false);
+    };
+
     return (
-    <div className="bg-white p-6 md:p-8 rounded-2xl shadow-xl max-w-7xl mx-auto">
-      <h2 className="text-2xl font-bold text-gray-800">Admin Panel</h2>
-      <div className="mt-4 border-b border-gray-200">
-        <nav className="-mb-px flex space-x-6" aria-label="Tabs">
-            {availableTabs.map(tab => (
-                 <TabButton key={tab.name} label={tab.label} tabName={tab.name} activeTab={activeTab} onClick={setActiveTab} />
-            ))}
-        </nav>
+    <div className="bg-white p-3 sm:p-6 rounded-2xl shadow-xl max-w-7xl mx-auto">
+      <div className="mb-4 sm:mb-6">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3 sm:mb-4">Admin Panel</h2>
+
+        {/* Navigation Buttons */}
+        <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
+          {/* Frequent Tabs as Direct Buttons */}
+          {frequentTabs.map(tab => (
+            <button
+              key={tab.name}
+              onClick={() => handleTabSelect(tab.name)}
+              className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-lg transition-colors whitespace-nowrap ${
+                activeTab === tab.name
+                  ? 'bg-brand-primary text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+
+          {/* Dropdown for Less Used Tabs */}
+          {dropdownTabs.length > 0 && (
+            <div className="relative">
+              <button
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-lg transition-colors flex items-center gap-1 whitespace-nowrap ${
+                  dropdownTabs.some(tab => tab.name === activeTab)
+                    ? 'bg-brand-primary text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                More
+                <svg className={`w-3 h-3 sm:w-4 sm:h-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                </svg>
+              </button>
+
+              {/* Dropdown Menu Items */}
+              {isDropdownOpen && (
+                <div className="absolute left-0 mt-2 w-48 sm:w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
+                  {dropdownTabs.map((tab) => (
+                    <button
+                      key={tab.name}
+                      onClick={() => handleTabSelect(tab.name)}
+                      className={`w-full text-left px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-colors ${
+                        activeTab === tab.name
+                          ? 'bg-brand-primary text-white'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="mt-8">
+      <div className="mt-4 sm:mt-6">
         {activeTab === 'dashboard' && <Dashboard />}
+        {activeTab === 'visits' && hasPermission('VIEW_RECEPTION') && <VisitsManagement />}
         {activeTab === 'users' && hasPermission('MANAGE_USERS') && <UserManagement />}
         {activeTab === 'approvers' && hasPermission('MANAGE_USERS') && <ApproverManagement />}
         {activeTab === 'branches' && hasPermission('MANAGE_USERS') && <BranchManagement />}

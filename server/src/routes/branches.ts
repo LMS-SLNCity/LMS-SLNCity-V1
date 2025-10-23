@@ -108,12 +108,29 @@ router.patch('/:id', async (req: Request, res: Response) => {
   }
 });
 
-// Delete branch
+// Delete branch (soft delete - set is_active to false)
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
-    const result = await pool.query('DELETE FROM branches WHERE id = $1 RETURNING id', [req.params.id]);
+    const result = await pool.query(
+      `UPDATE branches
+       SET is_active = false, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1
+       RETURNING id, name, address, phone, email, city, state, pincode, is_active`,
+      [req.params.id]
+    );
     if (result.rows.length === 0) return res.status(404).json({ error: 'Branch not found' });
-    res.json({ message: 'Branch deleted successfully' });
+    const row = result.rows[0];
+    res.json({
+      id: row.id,
+      name: row.name,
+      address: row.address,
+      phone: row.phone,
+      email: row.email,
+      city: row.city,
+      state: row.state,
+      pincode: row.pincode,
+      isActive: row.is_active,
+    });
   } catch (error) {
     console.error('Error deleting branch:', error);
     res.status(500).json({ error: 'Internal server error' });

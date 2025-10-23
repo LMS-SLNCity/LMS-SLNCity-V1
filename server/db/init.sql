@@ -221,6 +221,15 @@ CREATE TABLE patient_report_access_logs (
     user_agent TEXT
 );
 
+-- Role Permissions table
+CREATE TABLE role_permissions (
+    id SERIAL PRIMARY KEY,
+    role VARCHAR(50) NOT NULL UNIQUE CHECK (role IN ('SUDO', 'ADMIN', 'RECEPTION', 'PHLEBOTOMY', 'LAB', 'APPROVER')),
+    permissions TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Audit Logs table
 CREATE TABLE audit_logs (
     id SERIAL PRIMARY KEY,

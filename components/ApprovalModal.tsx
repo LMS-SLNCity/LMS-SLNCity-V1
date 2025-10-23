@@ -12,12 +12,16 @@ export const ApprovalModal: React.FC<ApprovalModalProps> = ({ test, onClose }) =
   const { approveTestResult } = useAppContext();
   const { user } = useAuth();
 
-  const handleApprove = () => {
+  const handleApprove = async () => {
     if (!user) {
         alert("User session has expired. Please log in again.");
         return;
     }
-    approveTestResult(test.id, user);
+    if (test.status !== 'AWAITING_APPROVAL') {
+        alert(`Cannot approve. Test status is ${test.status}. Only AWAITING_APPROVAL tests can be approved.`);
+        return;
+    }
+    await approveTestResult(test.id, user);
     onClose();
   };
 

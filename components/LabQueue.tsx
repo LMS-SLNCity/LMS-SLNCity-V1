@@ -40,8 +40,9 @@ export const LabQueue: React.FC<LabQueueProps> = ({ onInitiateReport }) => {
   const { visits, visitTests } = useAppContext();
   const [selectedTest, setSelectedTest] = useState<VisitTest | null>(null);
 
-  const pendingResults = visitTests.filter(test => test.status === 'SAMPLE_COLLECTED' || test.status === 'IN_PROGRESS');
-  const processedTests = visitTests.filter(test => ['AWAITING_APPROVAL', 'APPROVED'].includes(test.status)).sort((a, b) => new Date(b.collectedAt!).getTime() - new Date(a.collectedAt!).getTime());
+  // Only show SAMPLE_COLLECTED tests for result entry (not IN_PROGRESS)
+  const pendingResults = visitTests.filter(test => test.status === 'SAMPLE_COLLECTED');
+  const processedTests = visitTests.filter(test => ['IN_PROGRESS', 'AWAITING_APPROVAL', 'APPROVED'].includes(test.status)).sort((a, b) => new Date(b.collectedAt!).getTime() - new Date(a.collectedAt!).getTime());
   
   const findVisitForTest = (test: VisitTest): Visit | undefined => {
     return visits.find(v => v.id === test.visitId);
