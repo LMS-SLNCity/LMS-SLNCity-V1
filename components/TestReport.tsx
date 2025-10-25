@@ -1,7 +1,363 @@
-import React from 'react';
-import { VisitTest, Visit, Signatory } from '../types';
+// import React, { useEffect, useRef } from 'react';
+// import { VisitTest, Visit, Signatory } from '../types';
+// import { useAppContext } from '../context/AppContext';
+// import { QRCodeSVG } from 'qrcode.react';
+
+// // Barcode component
+// const BarcodeComponent: React.FC<{ value: string }> = ({ value }) => {
+//   const barcodeRef = useRef<SVGSVGElement>(null);
+
+//   useEffect(() => {
+//     if (barcodeRef.current && typeof window !== 'undefined') {
+//       try {
+//         import('jsbarcode').then((JsBarcode) => {
+//           if (barcodeRef.current) {
+//             JsBarcode.default(barcodeRef.current, value, {
+//               format: 'CODE128',
+//               width: 1.5,
+//               height: 40,
+//               displayValue: false,
+//             });
+//           }
+//         });
+//       } catch (error) {
+//         console.error('Error generating barcode:', error);
+//       }
+//     }
+//   }, [value]);
+
+//   return <svg ref={barcodeRef} style={{ maxWidth: '100%', height: 'auto', display: 'block' }}></svg>;
+// };
+
+// interface TestReportProps {
+//   visit: Visit;
+//   signatory: Signatory;
+//   canEdit: boolean;
+//   onEdit: (test: VisitTest) => void;
+// }
+
+// const formatAge = (p: Visit['patient']) => {
+//   if (p.age_years > 0) return `${p.age_years} Year(s)`;
+//   if (p.age_months > 0) return `${p.age_months} Month(s)`;
+//   if (p.age_days > 0) return `${p.age_days} Day(s)`;
+//   return 'N/A';
+// };
+
+// const formatDate = (dateString?: string) => {
+//   if (!dateString) return 'N/A';
+//   return new Date(dateString).toLocaleString('en-GB', {
+//     year: 'numeric',
+//     month: '2-digit',
+//     day: '2-digit',
+//     hour: '2-digit',
+//     minute: '2-digit'
+//   }).replace(',', '');
+// };
+
+// export const TestReport: React.FC<TestReportProps> = ({ visit, signatory, canEdit, onEdit }) => {
+//   const { visitTests } = useAppContext();
+
+//   const approvedTestsForVisit = visit.tests
+//     .map(testId => visitTests.find(vt => vt.id === testId && vt.status === 'APPROVED'))
+//     .filter(Boolean) as VisitTest[];
+
+//   if (!visit) {
+//     return <div className="bg-white p-8 max-w-4xl mx-auto text-red-500">Error: Visit data not found.</div>;
+//   }
+//   if (approvedTestsForVisit.length === 0) {
+//     return <div className="bg-white p-8 max-w-4xl mx-auto text-yellow-600">Report not ready. No approved tests found for this visit.</div>;
+//   }
+
+//   const firstTest = approvedTestsForVisit[0];
+//   const doctorName = visit.referred_doctor_id ? `Dr. ID: ${visit.referred_doctor_id}` : visit.other_ref_doctor || 'N/A';
+
+//   const testsByCategory = approvedTestsForVisit.reduce((acc, test) => {
+//     const category = test.template.category || 'Uncategorized';
+//     if (!acc[category]) {
+//       acc[category] = [];
+//     }
+//     acc[category].push(test);
+//     return acc;
+//   }, {} as Record<string, VisitTest[]>);
+
+//   return (
+//     <>
+//       <style>{`
+//         @media print {
+//           body {
+//             -webkit-print-color-adjust: exact;
+//             print-color-adjust: exact;
+//             margin: 0;
+//             padding: 0;
+//           }
+//           #test-report {
+//             box-shadow: none !important;
+//             max-width: 100% !important;
+//             margin: 0 !important;
+//             padding: 0.4in !important;
+//           }
+//           .screen-footer {
+//             display: none !important;
+//           }
+//         }
+//         table {
+//           border-collapse: collapse;
+//           width: 100%;
+//         }
+//         td, th {
+//           border: 1px solid #000;
+//           padding: 4px 6px;
+//           text-align: left;
+//         }
+//         th {
+//           background-color: #e5e5e5;
+//           font-weight: bold;
+//         }
+//       `}</style>
+
+//       <div id="test-report" className="bg-white max-w-4xl mx-auto" style={{ padding: '0.4in', fontFamily: 'Arial, sans-serif', fontSize: '12px' }}>
+
+//         {/* PATIENT INFORMATION - 2 Column Layout */}
+//         <div className="flex justify-between mb-6 gap-8">
+//           {/* LEFT COLUMN - Patient Details */}
+//           <div className="flex-1 text-xs space-y-1">
+//             <div className="flex">
+//               <span className="font-bold">Patient Name</span>
+//               <span className="ml-1">: {visit.patient.name}</span>
+//             </div>
+//             <div className="flex">
+//               <span className="font-bold">Age / Gender</span>
+//               <span className="ml-1">: {formatAge(visit.patient)} / {visit.patient.sex}</span>
+//             </div>
+//             <div className="flex">
+//               <span className="font-bold">Sample Type</span>
+//               <span className="ml-1">: {visit.sample_type || 'N/A'}</span>
+//             </div>
+//             <div className="flex">
+//               <span className="font-bold">Client Code</span>
+//               <span className="ml-1">: {visit.ref_customer_id || 'N/A'}</span>
+//             </div>
+//             <div className="flex">
+//               <span className="font-bold">Referred By</span>
+//               <span className="ml-1">: {doctorName}</span>
+//             </div>
+//           </div>
+
+//           {/* RIGHT COLUMN - Barcode + Patient ID + Dates */}
+//           <div className="flex flex-col items-end text-xs space-y-2">
+//             {/* Barcode */}
+//             <div className="w-40">
+//               <BarcodeComponent value={visit.visit_code} />
+//             </div>
+
+//             {/* Patient ID and Dates */}
+//             <div className="text-right space-y-0.5 text-xs">
+//               <div>
+//                 <span className="font-bold">Patient Id</span>
+//                 <span className="ml-2">{visit.visit_code}</span>
+//               </div>
+//               <div>
+//                 <span className="font-bold">Sample Drawn Date</span>
+//                 <span className="ml-2">{formatDate(visit.sample_drawn_datetime)}</span>
+//               </div>
+//               <div>
+//                 <span className="font-bold">Registration Date</span>
+//                 <span className="ml-2">{formatDate(visit.registration_datetime)}</span>
+//               </div>
+//               <div>
+//                 <span className="font-bold">Reported Date</span>
+//                 <span className="ml-2">{formatDate(firstTest.approvedAt)}</span>
+//               </div>
+//             </div>
+//           </div>
+//         </div>
+
+//         {/* TEST RESULTS SECTION */}
+//         <div className="mt-6">
+//           {Object.entries(testsByCategory).map(([category, tests]) => (
+//             <div key={category} className="mb-4">
+//               {/* Category Header - Gray Background */}
+//               <div className="bg-gray-300 border border-black py-1 px-2 mb-2">
+//                 <h3 className="font-bold text-sm text-black uppercase">{category}</h3>
+//               </div>
+
+//               {/* Results Table */}
+//               <table className="w-full text-xs border border-black mb-4">
+//                 <thead>
+//                   <tr className="bg-gray-300">
+//                     <th className="border border-black px-3 py-2 text-left">TEST DESCRIPTION</th>
+//                     <th className="border border-black px-3 py-2 text-center w-20">RESULT</th>
+//                     <th className="border border-black px-3 py-2 text-center w-20">UNITS</th>
+//                     <th className="border border-black px-3 py-2 text-left">BIOLOGICAL REFERENCE RANGE</th>
+//                   </tr>
+//                 </thead>
+//                 <tbody>
+//                   {tests.map(test => (
+//                     <React.Fragment key={test.id}>
+//                       {/* Test Name Row - Bold */}
+//                       <tr>
+//                         <td colSpan={4} className="border border-black px-3 py-1 font-bold bg-white">
+//                           {test.template.name}
+//                         </td>
+//                       </tr>
+//                       {/* Parameter Rows */}
+//                       {test.template.parameters?.fields && test.template.parameters.fields.length > 0 ? (
+//                         test.template.parameters.fields.map(param => (
+//                           <tr key={param.name}>
+//                             <td className="border border-black px-3 py-1">{param.name}</td>
+//                             <td className="border border-black px-3 py-1 font-bold text-center">{String(test.results?.[param.name] ?? '-')}</td>
+//                             <td className="border border-black px-3 py-1 text-center">{param.unit || ''}</td>
+//                             <td className="border border-black px-3 py-1">{param.reference_range || ''}</td>
+//                           </tr>
+//                         ))
+//                       ) : (
+//                         <tr>
+//                           <td colSpan={4} className="border border-black px-3 py-1 text-center">No parameters</td>
+//                         </tr>
+//                       )}
+//                     </React.Fragment>
+//                   ))}
+//                 </tbody>
+//               </table>
+//             </div>
+//           ))}
+//         </div>
+
+//         {/* END OF REPORT */}
+//         <div className="text-center font-bold text-xs mt-4 py-2">
+//           ** End of Report **
+//         </div>
+
+//         {/* FOOTER - Print View */}
+//         <div className="hidden print:block mt-6 pt-4 border-t-2 border-black">
+//           {/* Signature Section - 3 Columns */}
+//           <div className="grid grid-cols-3 gap-8 text-center mt-4 mb-4">
+//             {/* Left - Signature Line */}
+//             <div>
+//               <div className="h-8 border-b-2 border-black mb-1"></div>
+//               <p className="font-bold text-xs">DR MISBHA LATEEFA, MD</p>
+//               <p className="text-xs text-gray-700">Consultant Pathologist</p>
+//             </div>
+
+//             {/* Center - QR Code */}
+//             <div className="flex flex-col items-center">
+//               <div className="bg-white p-1 border border-gray-300 rounded mb-2">
+//                 <QRCodeSVG
+//                   value={`${window.location.origin}/verify-report/${visit.visit_code}`}
+//                   size={50}
+//                   level="H"
+//                   includeMargin={false}
+//                 />
+//               </div>
+//               <p className="text-xs text-gray-700">{visit.visit_code}</p>
+//             </div>
+
+//             {/* Right - Signatory */}
+//             <div>
+//               <div className="h-8 border-b-2 border-black mb-1"></div>
+//               <p className="font-bold text-xs">T.V. SUBBARAO</p>
+//               <p className="text-xs text-gray-700">M.Sc., Bio-Chemist</p>
+//             </div>
+//           </div>
+
+//           {/* Disclaimer & Notes */}
+//           <div className="text-xs text-gray-700 mt-3 pt-2 border-t border-black space-y-1">
+//             <p>Assay result should be correlated clinically with other laboratory finding and the total clinical status of the patient.</p>
+//             <p>Note :- This Report is subject to the terms and conditions mentioned overleaf</p>
+//             <p>Note :- PARTIAL REPRODUCTION OF THIS REPORT IS NOT PERMITTED</p>
+//           </div>
+
+//           {/* Page Number */}
+//           <div className="text-center text-xs mt-3 pt-2 border-t border-black">
+//             <p>Page 1 of 1</p>
+//           </div>
+//         </div>
+
+//         {/* FOOTER - Screen View */}
+//         <div className="screen-footer mt-6 pt-4 border-t-2 border-black">
+//           <div className="grid grid-cols-3 gap-6 mt-4">
+//             {/* Left - Signature */}
+//             <div className="flex flex-col items-center">
+//               <div className="border-b border-black w-32 mb-2"></div>
+//               <p className="font-bold text-xs">{signatory.name}</p>
+//               <p className="text-xs text-gray-600">{signatory.title}</p>
+//             </div>
+
+//             {/* Center - QR Code */}
+//             <div className="flex flex-col items-center">
+//               <div className="bg-white p-1 border border-gray-300 rounded mb-2">
+//                 <QRCodeSVG
+//                   value={`${window.location.origin}/verify-report/${visit.visit_code}`}
+//                   size={60}
+//                   level="H"
+//                   includeMargin={true}
+//                 />
+//               </div>
+//               <p className="text-xs text-gray-700">{visit.visit_code}</p>
+//             </div>
+
+//             {/* Right - Notes */}
+//             <div className="text-xs text-gray-700 space-y-1 flex flex-col justify-center">
+//               <p>Assay result should be correlated clinically with other laboratory finding and the total clinical status of the patient.</p>
+//               <p>Note :- This Report is subject to the terms and conditions mentioned overleaf</p>
+//               <p>Note :- PARTIAL REPRODUCTION OF THIS REPORT IS NOT PERMITTED</p>
+//             </div>
+//           </div>
+//         </div>
+//       </div>
+//     </>
+//   );
+// };
+
+import React, { useEffect, useRef, useState } from 'react';
+import { VisitTest, Visit, Signatory, Approver } from '../types';
 import { useAppContext } from '../context/AppContext';
-import { MicrobiologyReportDisplay } from './MicrobiologyReportDisplay';
+import { QRCodeSVG } from 'qrcode.react';
+
+// Barcode component using jsbarcode - SMALLER SIZE
+const BarcodeComponent: React.FC<{ value: string }> = ({ value }) => {
+  const barcodeRef = useRef<SVGSVGElement>(null);
+
+  useEffect(() => {
+    if (barcodeRef.current && typeof window !== 'undefined') {
+      try {
+        import('jsbarcode').then((JsBarcode) => {
+          if (barcodeRef.current) {
+            JsBarcode.default(barcodeRef.current, value, {
+              format: 'CODE128',
+              width: 1,
+              height: 25,
+              displayValue: false,
+            });
+          }
+        });
+      } catch (error) {
+        console.error('Error generating barcode:', error);
+      }
+    }
+  }, [value]);
+
+  return <svg ref={barcodeRef} style={{ maxWidth: '100%', height: 'auto', display: 'block' }}></svg>;
+};
+
+// Helper functions
+const formatAge = (p: Visit['patient']) => {
+  if (p.age_years > 0) return `${p.age_years} Year(s)`;
+  if (p.age_months > 0) return `${p.age_months} Month(s)`;
+  if (p.age_days > 0) return `${p.age_days} Day(s)`;
+  return 'N/A';
+};
+
+const formatDate = (dateString?: string) => {
+  if (!dateString) return 'N/A';
+  return new Date(dateString).toLocaleString('en-GB', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).replace(',', '');
+};
 
 interface TestReportProps {
   visit: Visit;
@@ -10,50 +366,34 @@ interface TestReportProps {
   onEdit: (test: VisitTest) => void;
 }
 
-const ReportRow: React.FC<{ label: string; value?: string | number }> = ({ label, value }) => (
-  <div className="flex">
-    <span className="font-semibold text-xs w-32 shrink-0">{label}</span>
-    <span className="font-semibold text-xs mr-2">:</span>
-    <span className="text-xs">{value || '-'}</span>
-  </div>
-);
+export const TestReport: React.FC<TestReportProps> = ({ visit, signatory }) => {
+  const { visitTests } = useAppContext();
+  const [approvers, setApprovers] = useState<Approver[]>([]);
 
-const formatAge = (p: Visit['patient']) => {
-    if (p.age_years > 0) return `${p.age_years} Year(s)`;
-    if (p.age_months > 0) return `${p.age_months} Month(s)`;
-    if (p.age_days > 0) return `${p.age_days} Day(s)`;
-    return 'N/A';
-}
+  // Fetch approvers on mount
+  useEffect(() => {
+    fetch('http://localhost:5001/api/approvers')
+      .then(res => res.json())
+      .then(data => setApprovers(data.filter((a: Approver) => a.show_on_print)))
+      .catch(err => console.error('Error fetching approvers:', err));
+  }, []);
 
-const formatDate = (dateString?: string) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleString('en-GB', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-    }).replace(',', '');
-}
-
-
-export const TestReport: React.FC<TestReportProps> = ({ visit, signatory, canEdit, onEdit }) => {
-  const { visitTests, clients } = useAppContext();
+  if (!visit) {
+    return <div className="bg-white p-8 max-w-4xl mx-auto text-red-500">Error: Visit data not found.</div>;
+  }
 
   const approvedTestsForVisit = visit.tests
     .map(testId => visitTests.find(vt => vt.id === testId && vt.status === 'APPROVED'))
     .filter(Boolean) as VisitTest[];
 
-  if (!visit) {
-    return <div className="bg-white p-8 max-w-4xl mx-auto text-red-500">Error: Visit data not found.</div>;
-  }
-   if (approvedTestsForVisit.length === 0) {
+  if (approvedTestsForVisit.length === 0) {
     return <div className="bg-white p-8 max-w-4xl mx-auto text-yellow-600">Report not ready. No approved tests found for this visit.</div>;
   }
 
   const firstTest = approvedTestsForVisit[0];
   const doctorName = visit.referred_doctor_id ? `Dr. ID: ${visit.referred_doctor_id}` : visit.other_ref_doctor || 'N/A';
 
+  // Group tests by category
   const testsByCategory = approvedTestsForVisit.reduce((acc, test) => {
     const category = test.template.category || 'Uncategorized';
     if (!acc[category]) {
@@ -63,164 +403,347 @@ export const TestReport: React.FC<TestReportProps> = ({ visit, signatory, canEdi
     return acc;
   }, {} as Record<string, VisitTest[]>);
 
-  const client = clients.find(c => c.id === visit.ref_customer_id);
-  const isB2BClient = client?.type === 'REFERRAL_LAB';
-
+  const qrValue = typeof window !== 'undefined'
+    ? `${window.location.origin}/verify-report/${visit.visit_code}`
+    : visit.visit_code;
 
   return (
     <>
-    <style>{`
-      @media print {
-        body {
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
+      <style>{`
+        @page {
+          size: A4;
+          margin: 0;
         }
-        .print-content-only .report-header,
-        .print-content-only .report-footer {
-          display: none;
+
+        html, body {
+          height: 100%;
+          margin: 0;
+          padding: 0;
         }
-        .print-content-only .report-body-container {
-           padding-top: 140px;
+
+        #test-report {
+          box-shadow: none !important;
+          max-width: 100% !important;
+          margin: 0 !important;
+          padding: 0 20mm 0 20mm !important;
+          min-height: 100vh !important;
+          height: auto !important;
+          display: flex !important;
+          flex-direction: column !important;
+          background: white !important;
         }
-      }
-      .text-xxs {
-        font-size: 0.65rem;
-        line-height: 0.9rem;
-      }
-    `}</style>
-    <div className="bg-white p-10 max-w-4xl mx-auto text-gray-900 shadow-2xl font-sans" id="test-report">
-        <div className="report-header border-b-4 border-black pb-4">
-            <h1 className="text-3xl font-bold text-black">SLNCity Diagnostic Center</h1>
-            <p className="text-xs text-gray-600">123 Health St, Wellness City | Phone: (123) 456-7890</p>
-        </div>
-        
-        <div className="report-body-container">
-            <div className="grid grid-cols-2 gap-x-8 mt-6 text-xs border-b-2 border-black pb-4">
-                <div className="space-y-1.5">
-                    <ReportRow label="Patient Name" value={visit.patient.name} />
-                    <ReportRow label="Age / Gender" value={`${formatAge(visit.patient)} / ${visit.patient.sex}`} />
-                    <ReportRow label="Sample Type" value={firstTest.specimen_type} />
-                    <ReportRow label="Client Code" value={visit.ref_customer_id ? `C${visit.ref_customer_id}` : '-'} />
-                    <ReportRow label="Referred By" value={doctorName} />
+
+        .report-content {
+          flex: 1 !important;
+          display: flex !important;
+          flex-direction: column !important;
+        }
+
+        .report-footer {
+          margin-top: auto !important;
+          padding-bottom: 20px !important;
+        }
+
+        @media print {
+          body {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          #test-report {
+            padding: 0 20mm 0 20mm !important;
+            height: 297mm !important;
+            min-height: 297mm !important;
+            page-break-after: always;
+          }
+          .report-footer {
+            padding-bottom: 15mm !important;
+          }
+        }
+
+        .top-space {
+          height: 1.5in;
+        }
+
+        table {
+          border-collapse: collapse;
+          width: 100%;
+          margin-bottom: 4px;
+        }
+
+        td, th {
+          border: 1px solid #000;
+          padding: 6px 8px;
+          text-align: left;
+          font-size: 11px;
+          line-height: 1.5;
+          vertical-align: middle;
+        }
+
+        th {
+          background-color: #e5e5e5;
+          font-weight: bold;
+          text-transform: uppercase;
+          font-size: 10px;
+          padding: 8px;
+        }
+
+        .section-title {
+          background-color: #e5e5e5;
+          border: 1px solid #000;
+          padding: 8px 10px;
+          font-weight: bold;
+          text-align: center;
+          text-transform: uppercase;
+          margin-bottom: 0;
+          font-size: 11px;
+        }
+
+        .test-group-row {
+          font-weight: bold;
+          background-color: #f9f9f9;
+        }
+      `}</style>
+
+      <div
+        id="test-report"
+        className="bg-white max-w-4xl mx-auto"
+        style={{
+          fontFamily: 'Arial, Helvetica, sans-serif',
+          fontSize: '11px',
+          lineHeight: '1.3',
+          color: '#000',
+          background: '#fff'
+        }}
+      >
+        {/* Top white space for pre-printed letterhead - REDUCED */}
+        <div className="top-space"></div>
+
+        <div className="report-content" style={{ minHeight: 'calc(297mm - 1.5in - 120mm)' }}>
+          {/* Patient Details Block - SYMMETRIC LAYOUT */}
+          <div style={{
+            marginBottom: '10px',
+            border: '1px solid #000'
+          }}>
+            {/* Top Row - Patient Info and Barcode */}
+            <div style={{
+              display: 'flex',
+              borderBottom: '1px solid #000'
+            }}>
+              {/* Left: Patient Details */}
+              <div style={{
+                flex: '1',
+                borderRight: '1px solid #000',
+                padding: '8px 12px',
+                fontSize: '11px',
+                lineHeight: '1.6'
+              }}>
+                <div style={{ marginBottom: '4px' }}>
+                  <span style={{ fontWeight: 'bold', display: 'inline-block', width: '130px' }}>Patient Name</span>
+                  <span>: {visit.patient.name}</span>
                 </div>
-                <div className="flex flex-col justify-between items-end">
-                     <div>
-                        <svg className="w-48 h-8" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 32" fill="black">
-                            <rect x="0" y="0" width="2" height="32" /> <rect x="4" y="0" width="2" height="32" />
-                            <rect x="8" y="0" width="4" height="32" /> <rect x="14" y="0" width="2" height="32" />
-                            <rect x="18" y="0" width="4" height="32" /> <rect x="24" y="0" width="2" height="32" />
-                            <rect x="28" y="0" width="2" height="32" /> <rect x="32" y="0" width="4" height="32" />
-                            <rect x="38" y="0" width="2" height="32" /> <rect x="42" y="0" width="2" height="32" />
-                            <rect x="48" y="0" width="4" height="32" /> <rect x="54" y="0" width="2" height="32" />
-                            <rect x="58" y="0" width="2" height="32" /> <rect x="62" y="0" width="4" height="32" />
-                            <rect x="68" y="0" width="2" height="32" /> <rect x="72" y="0" width="2" height="32" />
-                            <rect x="76" y="0" width="4" height="32" /> <rect x="82" y="0" width="4" height="32" />
-                            <rect x="88" y="0" width="2" height="32" /> <rect x="92" y="0" width="2" height="32" />
-                            <rect x="96" y="0" width="4" height="32" /> <rect x="102" y="0" width="2" height="32" />
-                            <rect x="106" y="0" width="4" height="32" /> <rect x="112" y="0" width="4" height="32" />
-                            <rect x="118" y="0" width="2" height="32" /> <rect x="122" y="0" width="4" height="32" />
-                            <rect x="128" y="0" width="2" height="32" /> <rect x="132" y="0" width="2" height="32" />
-                            <rect x="136" y="0" width="4" height="32" /> <rect x="142" y="0" width="2" height="32" />
-                            <rect x="146" y="0" width="4" height="32" /> <rect x="152" y="0" width="2" height="32" />
-                            <rect x="156" y="0" width="4" height="32" />
-                        </svg>
-                    </div>
-                    <div className="space-y-1.5">
-                        <ReportRow label="Patient Id" value={visit.visit_code} />
-                        <ReportRow label="Sample Drawn Date" value={formatDate(firstTest.collectedAt)} />
-                        <ReportRow label="Registration Date" value={formatDate(visit.registration_datetime)} />
-                        <ReportRow label="Reported Date" value={formatDate(firstTest.approvedAt)} />
-                    </div>
+                <div style={{ marginBottom: '4px' }}>
+                  <span style={{ fontWeight: 'bold', display: 'inline-block', width: '130px' }}>Age / Gender</span>
+                  <span>: {formatAge(visit.patient)} / {visit.patient.sex}</span>
                 </div>
+                <div style={{ marginBottom: '4px' }}>
+                  <span style={{ fontWeight: 'bold', display: 'inline-block', width: '130px' }}>Sample Type</span>
+                  <span>: {visit.sample_type || 'N/A'}</span>
+                </div>
+                <div style={{ marginBottom: '4px' }}>
+                  <span style={{ fontWeight: 'bold', display: 'inline-block', width: '130px' }}>Client Code</span>
+                  <span>: {visit.ref_customer_id || 'N/A'}</span>
+                </div>
+                <div>
+                  <span style={{ fontWeight: 'bold', display: 'inline-block', width: '130px' }}>Referred By</span>
+                  <span>: {doctorName}</span>
+                </div>
+              </div>
+
+              {/* Right: Barcode */}
+              <div style={{
+                width: '200px',
+                padding: '8px 12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <BarcodeComponent value={visit.visit_code} />
+              </div>
             </div>
 
-            <div className="mt-6">
-                {Object.entries(testsByCategory).map(([category, tests]) => (
-                    <div key={category} className="mt-4 break-inside-avoid">
-                        <div className="bg-gray-200 text-center py-1.5 border-x border-t border-black">
-                            <h3 className="font-bold text-sm tracking-wider text-black">{category.toUpperCase()}</h3>
-                        </div>
-                        {tests[0].template.reportType === 'culture' ? (
-                            tests.map(test => <MicrobiologyReportDisplay key={test.id} test={test} visit={visit} />)
-                        ) : (
-                           <div className="border-l border-r border-b border-black">
-                                {tests.map(test => (
-                                    <div key={test.id} className="pt-2 px-2 relative group first:pt-2 last:pb-2">
-                                        <div className="flex justify-between items-center">
-                                            <p className="font-bold text-sm text-black underline pl-2">{test.template.name}</p>
-                                            {canEdit && (
-                                                <button onClick={() => onEdit(test)} className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity px-2 py-0.5 text-xs bg-yellow-400 text-yellow-900 rounded-md hover:bg-yellow-500">
-                                                    Edit
-                                                </button>
-                                            )}
-                                        </div>
-                                        
-                                        <table className="min-w-full text-xs mt-1">
-                                            <thead className="border-b border-gray-300">
-                                                <tr>
-                                                    <th className="px-4 py-2 text-left font-semibold uppercase w-2/5 text-gray-700">Test Description</th>
-                                                    <th className="px-4 py-2 text-left font-semibold uppercase w-1/5 text-gray-700">Result</th>
-                                                    <th className="px-4 py-2 text-left font-semibold uppercase w-1/5 text-gray-700">Units</th>
-                                                    <th className="px-4 py-2 text-left font-semibold uppercase w-1/f text-gray-700">Reference Range</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {test.template.parameters?.fields && test.template.parameters.fields.length > 0 ? (
-                                                    test.template.parameters.fields.map(param => (
-                                                        <tr key={param.name} className="border-b border-gray-100 last:border-b-0">
-                                                            <td className="pl-6 pr-4 py-1.5 text-gray-800">{param.name}</td>
-                                                            <td className="px-4 py-1.5 font-bold text-black">{String(test.results?.[param.name] ?? '-')}</td>
-                                                            <td className="px-4 py-1.5 text-gray-800">{param.unit || ''}</td>
-                                                            <td className="px-4 py-1.5 text-gray-800">{param.reference_range || ''}</td>
-                                                        </tr>
-                                                    ))
-                                                ) : (
-                                                    <tr><td colSpan={4} className="px-4 py-3 text-center text-gray-500">No parameters for this test.</td></tr>
-                                                )}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                ))}
-                           </div>
-                        )}
+            {/* Bottom Row - Dates */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(4, 1fr)',
+              fontSize: '10px',
+              lineHeight: '1.5'
+            }}>
+              <div style={{ padding: '6px 12px', borderRight: '1px solid #000' }}>
+                <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>Patient Id</div>
+                <div>{visit.visit_code}</div>
+              </div>
+              <div style={{ padding: '6px 12px', borderRight: '1px solid #000' }}>
+                <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>Sample Drawn</div>
+                <div>{formatDate(visit.sample_drawn_datetime)}</div>
+              </div>
+              <div style={{ padding: '6px 12px', borderRight: '1px solid #000' }}>
+                <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>Registration</div>
+                <div>{formatDate(visit.registration_datetime)}</div>
+              </div>
+              <div style={{ padding: '6px 12px' }}>
+                <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>Reported</div>
+                <div>{formatDate(firstTest.approvedAt)}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section Blocks - Tests by Category - COMPACT */}
+          {Object.entries(testsByCategory).map(([category, tests]) => (
+            <div key={category} style={{ marginBottom: '8px' }}>
+              {/* Section Title */}
+              <div className="section-title">{category}</div>
+
+              {/* Test Results Table */}
+              <table>
+                <thead>
+                  <tr>
+                    <th style={{ width: '40%' }}>Test Description</th>
+                    <th style={{ width: '15%', textAlign: 'center' }}>Result</th>
+                    <th style={{ width: '15%', textAlign: 'center' }}>Units</th>
+                    <th style={{ width: '30%' }}>Biological Reference Range</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tests.map((test) => (
+                    <React.Fragment key={test.id}>
+                      {/* Test Group Row */}
+                      <tr className="test-group-row">
+                        <td colSpan={4}>{test.template.name}</td>
+                      </tr>
+
+                      {/* Parameter Rows */}
+                      {test.template.parameters?.fields && test.template.parameters.fields.length > 0 ? (
+                        test.template.parameters.fields.map((param: any) => (
+                          <tr key={param.name}>
+                            <td>{param.name}</td>
+                            <td style={{ textAlign: 'center', fontWeight: 'bold' }}>
+                              {String(test.results?.[param.name] ?? '-')}
+                            </td>
+                            <td style={{ textAlign: 'center' }}>{param.unit ?? ''}</td>
+                            <td>{param.reference_range ?? ''}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={4} style={{ textAlign: 'center' }}>No parameters</td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
+
+          {/* End of Report */}
+          <div style={{
+            textAlign: 'center',
+            fontWeight: 'bold',
+            margin: '10px 0',
+            padding: '6px 0',
+            fontSize: '10px'
+          }}>
+            ** End of Report **
+          </div>
+        </div>
+
+        {/* Footer Section - COMPACT & ALWAYS AT BOTTOM */}
+        <div className="report-footer" style={{
+          marginTop: 'auto',
+          borderTop: '1px solid #000',
+          paddingTop: '8px',
+          fontSize: '8px'
+        }}>
+          {/* Signatories - COMPACT with real approver data */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-end',
+            marginBottom: '6px',
+            minHeight: '35px'
+          }}>
+            {approvers.length > 0 ? (
+              <>
+                {/* Dynamic Approvers */}
+                {approvers.map((approver, index) => (
+                  <div key={approver.id} style={{ textAlign: index === 0 ? 'left' : index === approvers.length - 1 ? 'right' : 'center', flex: 1 }}>
+                    {approver.signature_image_url ? (
+                      <img src={approver.signature_image_url} alt="Signature" style={{ maxWidth: '80px', maxHeight: '25px', marginBottom: '2px' }} />
+                    ) : (
+                      <div style={{
+                        borderBottom: '1px solid #000',
+                        width: '80px',
+                        height: '20px',
+                        margin: index === 0 ? '0 0 2px 0' : index === approvers.length - 1 ? '0 0 2px auto' : '0 auto 2px',
+                        display: 'inline-block'
+                      }}></div>
+                    )}
+                    <div style={{ fontWeight: 'bold', fontSize: '8px', marginBottom: '1px' }}>
+                      {approver.name}
                     </div>
+                    <div style={{ fontSize: '7px', color: '#555' }}>
+                      {approver.title}
+                    </div>
+                  </div>
                 ))}
-                <p className="text-center font-bold text-xs mt-6">** End of Report **</p>
-            </div>
-        </div>
 
-        <div className="report-footer">
-            <div style={{minHeight: '100px'}}></div>
-            {isB2BClient && visit.due_amount > 0 && (
-                <div className="mt-4 p-2 border-2 border-dashed border-gray-400 bg-gray-50 text-gray-800 text-xs text-center">
-                    <strong>Billing Note (B2B Client):</strong> Amount due for this visit is <strong>₹{visit.due_amount.toFixed(2)}</strong>.
-                </div>
+                {/* QR Code - SMALL - in center if 2 approvers */}
+                {approvers.length === 2 && (
+                  <div style={{ textAlign: 'center', flex: 1 }}>
+                    <div style={{ width: '40px', height: '40px', margin: '0 auto' }}>
+                      <QRCodeSVG value={qrValue} size={40} level="M" includeMargin={false} />
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div style={{ textAlign: 'center', width: '100%', fontSize: '8px', color: '#999' }}>
+                Loading approvers...
+              </div>
             )}
-            <div className="mt-8 pt-8 border-t-2 border-gray-300 flex flex-col items-center text-xs">
-                 <div className="flex justify-center items-center flex-col mb-8">
-                     <svg viewBox="0 0 100 100" className="w-20 h-20">
-                        <path d="M0 0h30v30H0z M10 10h10v10H10z M70 0h30v30H70z M80 10h10v10H80z M0 70h30v30H0z M10 80h10v10H10z M40 0h10v10H40z M60 0h10v10H60z M0 40h10v10H0z M0 60h10v10H0z M90 40h10v10H90z M90 60h10v10H90z M40 90h10v10H40z M60 90h10v10H60z M40 40h30v10H40z M40 60h10v10H40z M60 60h10v10H60z M70 40h10v30H70z M40 70h30v10H40z M20 20h10v10H20z M20 40h10v10H20z M40 20h10v10H40z M20 60h10v10H20z M60 20h10v10H60z M60 40h10v10H60z" fill="#0f172a"/>
-                     </svg>
-                    <p className="text-xxs mt-1 text-gray-700">Scan to verify report for Visit ID: {visit.visit_code}</p>
-                </div>
-                
-                <div className="text-center">
-                    <div className="h-10"></div>
-                    <p className="font-bold text-sm">{signatory.name}</p>
-                    <p>{signatory.title}</p>
-                </div>
-            </div>
+          </div>
 
-            <div className="mt-8 text-xxs text-gray-600 space-y-1">
-                <p>Assay result should be correlated clinically with other laboratory finding and the total clinical status of the patient.</p>
-                <p>Note : This Report is subject to the terms and conditions mentioned overleaf</p>
-                <p>Note : PARTIAL REPRODUCTION OF THIS REPORT IS NOT PERMITTED</p>
-            </div>
-            <div className="text-right text-xs mt-4">
-                Page 1 of 1
-            </div>
+          {/* Footer Notes - ALL DISCLAIMERS */}
+          <div style={{
+            fontSize: '8px',
+            lineHeight: '1.4',
+            color: '#333',
+            marginTop: '6px',
+            paddingTop: '6px',
+            borderTop: '1px solid #000'
+          }}>
+            <p style={{ margin: '2px 0' }}>
+              Assay result should be correlated clinically with other laboratory finding and the total clinical status of the patient.
+            </p>
+            <p style={{ margin: '2px 0' }}>
+              Note :- This Report is subject to the terms and conditions mentioned overleaf
+            </p>
+            <p style={{ margin: '2px 0', fontWeight: 'bold' }}>
+              Note :- PARTIAL REPRODUCTION OF THIS REPORT IS NOT PERMITTED
+            </p>
+          </div>
+
+          {/* Page Number */}
+          <div style={{
+            textAlign: 'center',
+            fontSize: '8px',
+            marginTop: '4px',
+            color: '#333'
+          }}>
+            Page 1 of 1
+          </div>
         </div>
-    </div>
+      </div>
     </>
   );
 };
