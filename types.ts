@@ -130,6 +130,18 @@ export interface Signatory {
   title: string;
 }
 
+export interface Approver {
+  id: number;
+  user_id?: number;
+  name: string;
+  title: string;
+  role: string;
+  display_order: number;
+  show_on_print: boolean;
+  signature_image_url?: string;
+  is_active: boolean;
+}
+
 export interface ClientPrice {
     clientId: number;
     testTemplateId: number;

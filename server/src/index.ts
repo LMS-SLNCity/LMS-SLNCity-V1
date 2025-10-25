@@ -19,6 +19,7 @@ import branchesRoutes from './routes/branches.js';
 import signaturesRoutes from './routes/signatures.js';
 import dashboardRoutes from './routes/dashboard.js';
 import rolePermissionsRoutes from './routes/rolePermissions.js';
+import approversRoutes from './routes/approvers.js';
 
 dotenv.config();
 
@@ -57,6 +58,7 @@ app.use('/api/branches', branchesRoutes);
 app.use('/api/signatures', signaturesRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/role-permissions', rolePermissionsRoutes);
+app.use('/api/approvers', approversRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
