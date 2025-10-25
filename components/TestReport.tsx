@@ -359,6 +359,132 @@ const formatDate = (dateString?: string) => {
   }).replace(',', '');
 };
 
+// Pagination types and logic
+interface PageGroup {
+  department: string;
+  tests: VisitTest[];
+  parameterCount: number;
+}
+
+interface ReportPage {
+  pageNumber: number;
+  groups: PageGroup[];
+  totalParameters: number;
+}
+
+// Calculate how many parameters a test has
+const getTestParameterCount = (test: VisitTest): number => {
+  return test.template.parameters?.fields?.length || 0;
+};
+
+// Estimate if tests can fit on one page
+// Rough estimate: ~18-20 parameters per page (considering headers, footers, spacing)
+const MAX_PARAMETERS_PER_PAGE = 18;
+const MAX_PARAMETERS_FOR_SINGLE_TEST = 15; // If a test has more than this, give it its own page
+
+// Create pages with proper department grouping
+const createReportPages = (testsByCategory: Record<string, VisitTest[]>): ReportPage[] => {
+  const pages: ReportPage[] = [];
+  let currentPage: ReportPage = { pageNumber: 1, groups: [], totalParameters: 0 };
+
+  // Process each department
+  Object.entries(testsByCategory).forEach(([department, tests]) => {
+    // Calculate total parameters for this department
+    const departmentParamCount = tests.reduce((sum, test) => sum + getTestParameterCount(test), 0);
+
+    // Check if any single test in this department is too large
+    const hasLargeTest = tests.some(test => getTestParameterCount(test) > MAX_PARAMETERS_FOR_SINGLE_TEST);
+
+    if (hasLargeTest) {
+      // Process each test individually
+      tests.forEach(test => {
+        const paramCount = getTestParameterCount(test);
+
+        if (paramCount > MAX_PARAMETERS_FOR_SINGLE_TEST) {
+          // Large test gets its own page
+          if (currentPage.groups.length > 0) {
+            pages.push(currentPage);
+            currentPage = { pageNumber: pages.length + 1, groups: [], totalParameters: 0 };
+          }
+
+          pages.push({
+            pageNumber: pages.length + 1,
+            groups: [{ department, tests: [test], parameterCount: paramCount }],
+            totalParameters: paramCount
+          });
+        } else {
+          // Small test - try to fit with others
+          if (currentPage.totalParameters + paramCount > MAX_PARAMETERS_PER_PAGE) {
+            // Start new page
+            pages.push(currentPage);
+            currentPage = { pageNumber: pages.length + 1, groups: [], totalParameters: 0 };
+          }
+
+          // Add to current page
+          const existingGroup = currentPage.groups.find(g => g.department === department);
+          if (existingGroup) {
+            existingGroup.tests.push(test);
+            existingGroup.parameterCount += paramCount;
+          } else {
+            currentPage.groups.push({ department, tests: [test], parameterCount: paramCount });
+          }
+          currentPage.totalParameters += paramCount;
+        }
+      });
+    } else {
+      // All tests in department are small - try to keep together
+      if (currentPage.totalParameters + departmentParamCount > MAX_PARAMETERS_PER_PAGE) {
+        // Department doesn't fit on current page
+        if (currentPage.groups.length > 0) {
+          pages.push(currentPage);
+          currentPage = { pageNumber: pages.length + 1, groups: [], totalParameters: 0 };
+        }
+
+        // Check if entire department fits on one page
+        if (departmentParamCount <= MAX_PARAMETERS_PER_PAGE) {
+          // Entire department on one page
+          currentPage.groups.push({ department, tests, parameterCount: departmentParamCount });
+          currentPage.totalParameters = departmentParamCount;
+        } else {
+          // Department needs to be split across pages
+          let remainingTests = [...tests];
+          while (remainingTests.length > 0) {
+            let pageParamCount = 0;
+            const pageTests: VisitTest[] = [];
+
+            while (remainingTests.length > 0 && pageParamCount + getTestParameterCount(remainingTests[0]) <= MAX_PARAMETERS_PER_PAGE) {
+              const test = remainingTests.shift()!;
+              pageTests.push(test);
+              pageParamCount += getTestParameterCount(test);
+            }
+
+            if (pageTests.length > 0) {
+              currentPage.groups.push({ department, tests: pageTests, parameterCount: pageParamCount });
+              currentPage.totalParameters = pageParamCount;
+
+              if (remainingTests.length > 0) {
+                pages.push(currentPage);
+                currentPage = { pageNumber: pages.length + 1, groups: [], totalParameters: 0 };
+              }
+            }
+          }
+        }
+      } else {
+        // Department fits on current page
+        currentPage.groups.push({ department, tests, parameterCount: departmentParamCount });
+        currentPage.totalParameters += departmentParamCount;
+      }
+    }
+  });
+
+  // Add last page if it has content
+  if (currentPage.groups.length > 0) {
+    pages.push(currentPage);
+  }
+
+  return pages;
+};
+
 interface TestReportProps {
   visit: Visit;
   signatory: Signatory;
@@ -402,6 +528,10 @@ export const TestReport: React.FC<TestReportProps> = ({ visit, signatory }) => {
     acc[category].push(test);
     return acc;
   }, {} as Record<string, VisitTest[]>);
+
+  // Create paginated report
+  const reportPages = createReportPages(testsByCategory);
+  const totalPages = reportPages.length;
 
   const qrValue = typeof window !== 'undefined'
     ? `${window.location.origin}/verify-report/${visit.visit_code}`
@@ -502,23 +632,44 @@ export const TestReport: React.FC<TestReportProps> = ({ visit, signatory }) => {
           font-weight: bold;
           background-color: #f9f9f9;
         }
+
+        .report-page {
+          position: relative;
+        }
+
+        @media print {
+          .report-page {
+            page-break-after: always;
+            height: 297mm;
+            min-height: 297mm;
+          }
+
+          .report-page:last-child {
+            page-break-after: auto;
+          }
+        }
       `}</style>
 
-      <div
-        id="test-report"
-        className="bg-white max-w-4xl mx-auto"
-        style={{
-          fontFamily: 'Arial, Helvetica, sans-serif',
-          fontSize: '11px',
-          lineHeight: '1.3',
-          color: '#000',
-          background: '#fff'
-        }}
-      >
-        {/* Top white space for pre-printed letterhead - REDUCED */}
-        <div className="top-space"></div>
+      {/* Render each page */}
+      {reportPages.map((page, pageIndex) => (
+        <div
+          key={pageIndex}
+          id={pageIndex === 0 ? "test-report" : `test-report-page-${pageIndex + 1}`}
+          className="bg-white max-w-4xl mx-auto report-page"
+          style={{
+            fontFamily: 'Arial, Helvetica, sans-serif',
+            fontSize: '11px',
+            lineHeight: '1.3',
+            color: '#000',
+            background: '#fff',
+            pageBreakAfter: pageIndex < reportPages.length - 1 ? 'always' : 'auto',
+            minHeight: '297mm'
+          }}
+        >
+          {/* Top white space for pre-printed letterhead */}
+          <div className="top-space"></div>
 
-        <div className="report-content" style={{ minHeight: 'calc(297mm - 1.5in - 120mm)' }}>
+          <div className="report-content" style={{ minHeight: 'calc(297mm - 1.5in - 120mm)' }}>
           {/* Patient Details Block - SYMMETRIC LAYOUT */}
           <div style={{
             marginBottom: '10px',
@@ -597,11 +748,11 @@ export const TestReport: React.FC<TestReportProps> = ({ visit, signatory }) => {
             </div>
           </div>
 
-          {/* Section Blocks - Tests by Category - COMPACT */}
-          {Object.entries(testsByCategory).map(([category, tests]) => (
-            <div key={category} style={{ marginBottom: '8px' }}>
+          {/* Section Blocks - Tests by Department for this page */}
+          {page.groups.map((group, groupIndex) => (
+            <div key={`${pageIndex}-${groupIndex}`} style={{ marginBottom: '8px' }}>
               {/* Section Title */}
-              <div className="section-title">{category}</div>
+              <div className="section-title">{group.department}</div>
 
               {/* Test Results Table */}
               <table>
@@ -614,7 +765,7 @@ export const TestReport: React.FC<TestReportProps> = ({ visit, signatory }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {tests.map((test) => (
+                  {group.tests.map((test) => (
                     <React.Fragment key={test.id}>
                       {/* Test Group Row */}
                       <tr className="test-group-row">
@@ -645,16 +796,18 @@ export const TestReport: React.FC<TestReportProps> = ({ visit, signatory }) => {
             </div>
           ))}
 
-          {/* End of Report */}
-          <div style={{
-            textAlign: 'center',
-            fontWeight: 'bold',
-            margin: '10px 0',
-            padding: '6px 0',
-            fontSize: '10px'
-          }}>
-            ** End of Report **
-          </div>
+          {/* End of Report - Only on last page */}
+          {pageIndex === reportPages.length - 1 && (
+            <div style={{
+              textAlign: 'center',
+              fontWeight: 'bold',
+              margin: '10px 0',
+              padding: '6px 0',
+              fontSize: '10px'
+            }}>
+              ** End of Report **
+            </div>
+          )}
         </div>
 
         {/* Footer Section - COMPACT & ALWAYS AT BOTTOM */}
@@ -740,10 +893,11 @@ export const TestReport: React.FC<TestReportProps> = ({ visit, signatory }) => {
             marginTop: '4px',
             color: '#333'
           }}>
-            Page 1 of 1
+            Page {pageIndex + 1} of {totalPages}
           </div>
         </div>
       </div>
+      ))}
     </>
   );
 };

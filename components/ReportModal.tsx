@@ -20,56 +20,14 @@ export const ReportModal: React.FC<ReportModalProps> = ({ visit, signatory, onCl
   const handlePrint = async () => {
     try {
       setIsExporting(true);
-      const element = document.getElementById('test-report-content');
 
-      if (!element) {
+      // Find all report pages
+      const reportPages = document.querySelectorAll('.report-page');
+
+      if (reportPages.length === 0) {
         alert('Report content not found');
         return;
       }
-
-      // Clone the element to avoid modifying the DOM
-      const clonedElement = element.cloneNode(true) as HTMLElement;
-
-      // Remove header from cloned element for print
-      const header = clonedElement.querySelector('.report-header');
-      if (header) {
-        header.remove();
-      }
-
-      // Create a temporary container with exact A4 dimensions
-      const tempContainer = document.createElement('div');
-      tempContainer.style.position = 'absolute';
-      tempContainer.style.left = '-9999px';
-      tempContainer.style.width = '210mm';
-      tempContainer.style.height = '297mm';
-      tempContainer.style.display = 'flex';
-      tempContainer.style.flexDirection = 'column';
-      tempContainer.appendChild(clonedElement);
-      document.body.appendChild(tempContainer);
-
-      // Force the cloned element to fill the container
-      clonedElement.style.width = '210mm';
-      clonedElement.style.height = '297mm';
-      clonedElement.style.display = 'flex';
-      clonedElement.style.flexDirection = 'column';
-
-      // Find and style the footer to stick to bottom
-      const footer = clonedElement.querySelector('.report-footer') as HTMLElement;
-      if (footer) {
-        footer.style.marginTop = 'auto';
-      }
-
-      // Create canvas from the cloned element (with footer and QR code)
-      const canvas = await html2canvas(clonedElement, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-        allowTaint: true,
-      });
-
-      // Remove temporary container
-      document.body.removeChild(tempContainer);
 
       // Create PDF
       const pdf = new jsPDF({
@@ -78,31 +36,52 @@ export const ReportModal: React.FC<ReportModalProps> = ({ visit, signatory, onCl
         format: 'a4',
       });
 
-      const imgData = canvas.toDataURL('image/png');
-      const imgWidth = 210; // A4 width in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      // Process each page
+      for (let i = 0; i < reportPages.length; i++) {
+        const pageElement = reportPages[i] as HTMLElement;
 
-      // Since we forced the container to be exactly 297mm, the image should fit on one page
-      // Add image to PDF - fit to single page
-      const pdfHeight = 297; // A4 height in mm
+        // Clone the page to avoid modifying the DOM
+        const clonedPage = pageElement.cloneNode(true) as HTMLElement;
 
-      if (imgHeight <= pdfHeight + 5) {
-        // Single page - fit exactly
-        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, Math.min(imgHeight, pdfHeight));
-      } else {
-        // Multiple pages needed
-        let heightLeft = imgHeight;
-        let position = 0;
+        // Create a temporary container with exact A4 dimensions
+        const tempContainer = document.createElement('div');
+        tempContainer.style.position = 'absolute';
+        tempContainer.style.left = '-9999px';
+        tempContainer.style.width = '210mm';
+        tempContainer.style.height = '297mm';
+        tempContainer.appendChild(clonedPage);
+        document.body.appendChild(tempContainer);
 
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pdfHeight;
+        // Force the cloned page to exact A4 size
+        clonedPage.style.width = '210mm';
+        clonedPage.style.height = '297mm';
+        clonedPage.style.display = 'flex';
+        clonedPage.style.flexDirection = 'column';
 
-        while (heightLeft > 5) { // 5mm tolerance to avoid blank pages
-          position = heightLeft - imgHeight;
+        // Create canvas from the cloned page
+        const canvas = await html2canvas(clonedPage, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+          allowTaint: true,
+        });
+
+        // Remove temporary container
+        document.body.removeChild(tempContainer);
+
+        // Add page to PDF
+        if (i > 0) {
           pdf.addPage();
-          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-          heightLeft -= pdfHeight;
         }
+
+        const imgData = canvas.toDataURL('image/png');
+        const imgWidth = 210; // A4 width in mm
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        const pdfHeight = 297; // A4 height in mm
+
+        // Fit image to page
+        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, Math.min(imgHeight, pdfHeight));
       }
 
       // Get PDF as blob and open in new window for printing
@@ -129,56 +108,14 @@ export const ReportModal: React.FC<ReportModalProps> = ({ visit, signatory, onCl
   const handleDownloadPDF = async () => {
     try {
       setIsExporting(true);
-      const element = document.getElementById('test-report-content');
 
-      if (!element) {
+      // Find all report pages
+      const reportPages = document.querySelectorAll('.report-page');
+
+      if (reportPages.length === 0) {
         alert('Report content not found');
         return;
       }
-
-      // Clone the element to avoid modifying the DOM
-      const clonedElement = element.cloneNode(true) as HTMLElement;
-
-      // Remove header from cloned element for print
-      const header = clonedElement.querySelector('.report-header');
-      if (header) {
-        header.remove();
-      }
-
-      // Create a temporary container with exact A4 dimensions
-      const tempContainer = document.createElement('div');
-      tempContainer.style.position = 'absolute';
-      tempContainer.style.left = '-9999px';
-      tempContainer.style.width = '210mm';
-      tempContainer.style.height = '297mm';
-      tempContainer.style.display = 'flex';
-      tempContainer.style.flexDirection = 'column';
-      tempContainer.appendChild(clonedElement);
-      document.body.appendChild(tempContainer);
-
-      // Force the cloned element to fill the container
-      clonedElement.style.width = '210mm';
-      clonedElement.style.height = '297mm';
-      clonedElement.style.display = 'flex';
-      clonedElement.style.flexDirection = 'column';
-
-      // Find and style the footer to stick to bottom
-      const footer = clonedElement.querySelector('.report-footer') as HTMLElement;
-      if (footer) {
-        footer.style.marginTop = 'auto';
-      }
-
-      // Create canvas from the cloned element (with footer and QR code)
-      const canvas = await html2canvas(clonedElement, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-        allowTaint: true,
-      });
-
-      // Remove temporary container
-      document.body.removeChild(tempContainer);
 
       // Create PDF
       const pdf = new jsPDF({
@@ -187,31 +124,52 @@ export const ReportModal: React.FC<ReportModalProps> = ({ visit, signatory, onCl
         format: 'a4',
       });
 
-      const imgData = canvas.toDataURL('image/png');
-      const imgWidth = 210; // A4 width in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      // Process each page
+      for (let i = 0; i < reportPages.length; i++) {
+        const pageElement = reportPages[i] as HTMLElement;
 
-      // Since we forced the container to be exactly 297mm, the image should fit on one page
-      // Add image to PDF - fit to single page
-      const pdfHeight = 297; // A4 height in mm
+        // Clone the page to avoid modifying the DOM
+        const clonedPage = pageElement.cloneNode(true) as HTMLElement;
 
-      if (imgHeight <= pdfHeight + 5) {
-        // Single page - fit exactly
-        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, Math.min(imgHeight, pdfHeight));
-      } else {
-        // Multiple pages needed
-        let heightLeft = imgHeight;
-        let position = 0;
+        // Create a temporary container with exact A4 dimensions
+        const tempContainer = document.createElement('div');
+        tempContainer.style.position = 'absolute';
+        tempContainer.style.left = '-9999px';
+        tempContainer.style.width = '210mm';
+        tempContainer.style.height = '297mm';
+        tempContainer.appendChild(clonedPage);
+        document.body.appendChild(tempContainer);
 
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pdfHeight;
+        // Force the cloned page to exact A4 size
+        clonedPage.style.width = '210mm';
+        clonedPage.style.height = '297mm';
+        clonedPage.style.display = 'flex';
+        clonedPage.style.flexDirection = 'column';
 
-        while (heightLeft > 5) { // 5mm tolerance to avoid blank pages
-          position = heightLeft - imgHeight;
+        // Create canvas from the cloned page
+        const canvas = await html2canvas(clonedPage, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+          allowTaint: true,
+        });
+
+        // Remove temporary container
+        document.body.removeChild(tempContainer);
+
+        // Add page to PDF
+        if (i > 0) {
           pdf.addPage();
-          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-          heightLeft -= pdfHeight;
         }
+
+        const imgData = canvas.toDataURL('image/png');
+        const imgWidth = 210; // A4 width in mm
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        const pdfHeight = 297; // A4 height in mm
+
+        // Fit image to page
+        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, Math.min(imgHeight, pdfHeight));
       }
 
       // Save PDF
