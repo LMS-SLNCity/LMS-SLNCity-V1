@@ -412,47 +412,71 @@ export const TestReport: React.FC<TestReportProps> = ({ visit, signatory }) => {
       <style>{`
         @page {
           size: A4;
-          margin: 15mm;
+          margin: 0;
+        }
+
+        html, body {
+          height: 100%;
+          margin: 0;
+          padding: 0;
+        }
+
+        #test-report {
+          box-shadow: none !important;
+          max-width: 100% !important;
+          margin: 0 !important;
+          padding: 0 20mm 0 20mm !important;
+          min-height: 100vh !important;
+          height: auto !important;
+          display: flex !important;
+          flex-direction: column !important;
+          background: white !important;
+        }
+
+        .report-content {
+          flex: 1 !important;
+          display: flex !important;
+          flex-direction: column !important;
+        }
+
+        .report-footer {
+          margin-top: auto !important;
+          padding-bottom: 20px !important;
         }
 
         @media print {
           body {
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
-            margin: 0;
-            padding: 0;
           }
           #test-report {
-            box-shadow: none !important;
-            max-width: 100% !important;
-            margin: 0 !important;
-            padding: 15mm !important;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-          }
-          .report-content {
-            flex: 1;
+            padding: 0 20mm 0 20mm !important;
+            height: 297mm !important;
+            min-height: 297mm !important;
+            page-break-after: always;
           }
           .report-footer {
-            margin-top: auto;
+            padding-bottom: 15mm !important;
           }
         }
 
         .top-space {
-          height: 1in;
+          height: 1.5in;
         }
 
         table {
           border-collapse: collapse;
           width: 100%;
+          margin-bottom: 4px;
         }
 
         td, th {
           border: 1px solid #000;
-          padding: 3px 6px;
+          padding: 6px 8px;
           text-align: left;
           font-size: 11px;
+          line-height: 1.5;
+          vertical-align: middle;
         }
 
         th {
@@ -460,12 +484,13 @@ export const TestReport: React.FC<TestReportProps> = ({ visit, signatory }) => {
           font-weight: bold;
           text-transform: uppercase;
           font-size: 10px;
+          padding: 8px;
         }
 
         .section-title {
           background-color: #e5e5e5;
           border: 1px solid #000;
-          padding: 4px 8px;
+          padding: 8px 10px;
           font-weight: bold;
           text-align: center;
           text-transform: uppercase;
@@ -483,77 +508,91 @@ export const TestReport: React.FC<TestReportProps> = ({ visit, signatory }) => {
         id="test-report"
         className="bg-white max-w-4xl mx-auto"
         style={{
-          padding: '15mm',
           fontFamily: 'Arial, Helvetica, sans-serif',
           fontSize: '11px',
           lineHeight: '1.3',
           color: '#000',
-          background: '#fff',
-          minHeight: '100vh',
-          display: 'flex',
-          flexDirection: 'column'
+          background: '#fff'
         }}
       >
         {/* Top white space for pre-printed letterhead - REDUCED */}
         <div className="top-space"></div>
 
-        <div className="report-content" style={{ flex: 1 }}>
-          {/* Patient Details Block - TIGHT SPACING */}
+        <div className="report-content" style={{ minHeight: 'calc(297mm - 1.5in - 120mm)' }}>
+          {/* Patient Details Block - SYMMETRIC LAYOUT */}
           <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
             marginBottom: '10px',
-            border: '1px solid #000',
-            padding: '4px 8px',
-            fontSize: '10px',
-            lineHeight: '1.4'
+            border: '1px solid #000'
           }}>
-            {/* Left Column - Patient Details */}
-            <div style={{ flex: 1, paddingRight: '10px' }}>
-              <div style={{ marginBottom: '1px' }}>
-                <span style={{ fontWeight: 'bold', display: 'inline-block', minWidth: '110px' }}>Patient Name</span>
-                <span>: {visit.patient.name}</span>
+            {/* Top Row - Patient Info and Barcode */}
+            <div style={{
+              display: 'flex',
+              borderBottom: '1px solid #000'
+            }}>
+              {/* Left: Patient Details */}
+              <div style={{
+                flex: '1',
+                borderRight: '1px solid #000',
+                padding: '8px 12px',
+                fontSize: '11px',
+                lineHeight: '1.6'
+              }}>
+                <div style={{ marginBottom: '4px' }}>
+                  <span style={{ fontWeight: 'bold', display: 'inline-block', width: '130px' }}>Patient Name</span>
+                  <span>: {visit.patient.name}</span>
+                </div>
+                <div style={{ marginBottom: '4px' }}>
+                  <span style={{ fontWeight: 'bold', display: 'inline-block', width: '130px' }}>Age / Gender</span>
+                  <span>: {formatAge(visit.patient)} / {visit.patient.sex}</span>
+                </div>
+                <div style={{ marginBottom: '4px' }}>
+                  <span style={{ fontWeight: 'bold', display: 'inline-block', width: '130px' }}>Sample Type</span>
+                  <span>: {visit.sample_type || 'N/A'}</span>
+                </div>
+                <div style={{ marginBottom: '4px' }}>
+                  <span style={{ fontWeight: 'bold', display: 'inline-block', width: '130px' }}>Client Code</span>
+                  <span>: {visit.ref_customer_id || 'N/A'}</span>
+                </div>
+                <div>
+                  <span style={{ fontWeight: 'bold', display: 'inline-block', width: '130px' }}>Referred By</span>
+                  <span>: {doctorName}</span>
+                </div>
               </div>
-              <div style={{ marginBottom: '1px' }}>
-                <span style={{ fontWeight: 'bold', display: 'inline-block', minWidth: '110px' }}>Age / Gender</span>
-                <span>: {formatAge(visit.patient)} / {visit.patient.sex}</span>
-              </div>
-              <div style={{ marginBottom: '1px' }}>
-                <span style={{ fontWeight: 'bold', display: 'inline-block', minWidth: '110px' }}>Sample Type</span>
-                <span>: {visit.sample_type || 'N/A'}</span>
-              </div>
-              <div style={{ marginBottom: '1px' }}>
-                <span style={{ fontWeight: 'bold', display: 'inline-block', minWidth: '110px' }}>Client Code</span>
-                <span>: {visit.ref_customer_id || 'N/A'}</span>
-              </div>
-              <div style={{ marginBottom: '0' }}>
-                <span style={{ fontWeight: 'bold', display: 'inline-block', minWidth: '110px' }}>Referred By</span>
-                <span>: {doctorName}</span>
+
+              {/* Right: Barcode */}
+              <div style={{
+                width: '200px',
+                padding: '8px 12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <BarcodeComponent value={visit.visit_code} />
               </div>
             </div>
 
-            {/* Right Column - Barcode + Dates - TIGHT */}
-            <div style={{ flex: 1, textAlign: 'right', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-              <div style={{ marginBottom: '2px' }}>
-                <BarcodeComponent value={visit.visit_code} />
+            {/* Bottom Row - Dates */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(4, 1fr)',
+              fontSize: '10px',
+              lineHeight: '1.5'
+            }}>
+              <div style={{ padding: '6px 12px', borderRight: '1px solid #000' }}>
+                <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>Patient Id</div>
+                <div>{visit.visit_code}</div>
               </div>
-              <div style={{ fontSize: '9px', lineHeight: '1.3' }}>
-                <div style={{ marginBottom: '0px' }}>
-                  <span style={{ fontWeight: 'bold' }}>Patient Id</span>
-                  <span style={{ marginLeft: '6px' }}>{visit.visit_code}</span>
-                </div>
-                <div style={{ marginBottom: '0px' }}>
-                  <span style={{ fontWeight: 'bold' }}>Sample Drawn</span>
-                  <span style={{ marginLeft: '6px' }}>{formatDate(visit.sample_drawn_datetime)}</span>
-                </div>
-                <div style={{ marginBottom: '0px' }}>
-                  <span style={{ fontWeight: 'bold' }}>Registration</span>
-                  <span style={{ marginLeft: '6px' }}>{formatDate(visit.registration_datetime)}</span>
-                </div>
-                <div style={{ marginBottom: '0' }}>
-                  <span style={{ fontWeight: 'bold' }}>Reported</span>
-                  <span style={{ marginLeft: '6px' }}>{formatDate(firstTest.approvedAt)}</span>
-                </div>
+              <div style={{ padding: '6px 12px', borderRight: '1px solid #000' }}>
+                <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>Sample Drawn</div>
+                <div>{formatDate(visit.sample_drawn_datetime)}</div>
+              </div>
+              <div style={{ padding: '6px 12px', borderRight: '1px solid #000' }}>
+                <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>Registration</div>
+                <div>{formatDate(visit.registration_datetime)}</div>
+              </div>
+              <div style={{ padding: '6px 12px' }}>
+                <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>Reported</div>
+                <div>{formatDate(firstTest.approvedAt)}</div>
               </div>
             </div>
           </div>
@@ -674,26 +713,32 @@ export const TestReport: React.FC<TestReportProps> = ({ visit, signatory }) => {
             )}
           </div>
 
-          {/* Footer Notes - COMPACT */}
+          {/* Footer Notes - ALL DISCLAIMERS */}
           <div style={{
-            fontSize: '7px',
-            lineHeight: '1.3',
-            color: '#555',
-            marginTop: '4px',
-            paddingTop: '4px',
-            borderTop: '1px solid #ddd'
+            fontSize: '8px',
+            lineHeight: '1.4',
+            color: '#333',
+            marginTop: '6px',
+            paddingTop: '6px',
+            borderTop: '1px solid #000'
           }}>
-            <p style={{ margin: '1px 0' }}>
-              Assay result should be correlated clinically. This Report is subject to terms mentioned overleaf. PARTIAL REPRODUCTION NOT PERMITTED.
+            <p style={{ margin: '2px 0' }}>
+              Assay result should be correlated clinically with other laboratory finding and the total clinical status of the patient.
+            </p>
+            <p style={{ margin: '2px 0' }}>
+              Note :- This Report is subject to the terms and conditions mentioned overleaf
+            </p>
+            <p style={{ margin: '2px 0', fontWeight: 'bold' }}>
+              Note :- PARTIAL REPRODUCTION OF THIS REPORT IS NOT PERMITTED
             </p>
           </div>
 
-          {/* Page Number - TINY */}
+          {/* Page Number */}
           <div style={{
             textAlign: 'center',
-            fontSize: '7px',
-            marginTop: '3px',
-            color: '#777'
+            fontSize: '8px',
+            marginTop: '4px',
+            color: '#333'
           }}>
             Page 1 of 1
           </div>

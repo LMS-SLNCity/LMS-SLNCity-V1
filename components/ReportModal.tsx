@@ -36,13 +36,28 @@ export const ReportModal: React.FC<ReportModalProps> = ({ visit, signatory, onCl
         header.remove();
       }
 
-      // Create a temporary container
+      // Create a temporary container with exact A4 dimensions
       const tempContainer = document.createElement('div');
       tempContainer.style.position = 'absolute';
       tempContainer.style.left = '-9999px';
       tempContainer.style.width = '210mm';
+      tempContainer.style.height = '297mm';
+      tempContainer.style.display = 'flex';
+      tempContainer.style.flexDirection = 'column';
       tempContainer.appendChild(clonedElement);
       document.body.appendChild(tempContainer);
+
+      // Force the cloned element to fill the container
+      clonedElement.style.width = '210mm';
+      clonedElement.style.height = '297mm';
+      clonedElement.style.display = 'flex';
+      clonedElement.style.flexDirection = 'column';
+
+      // Find and style the footer to stick to bottom
+      const footer = clonedElement.querySelector('.report-footer') as HTMLElement;
+      if (footer) {
+        footer.style.marginTop = 'auto';
+      }
 
       // Create canvas from the cloned element (with footer and QR code)
       const canvas = await html2canvas(clonedElement, {
@@ -67,18 +82,27 @@ export const ReportModal: React.FC<ReportModalProps> = ({ visit, signatory, onCl
       const imgWidth = 210; // A4 width in mm
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-      let heightLeft = imgHeight;
-      let position = 0;
+      // Since we forced the container to be exactly 297mm, the image should fit on one page
+      // Add image to PDF - fit to single page
+      const pdfHeight = 297; // A4 height in mm
 
-      // Add image to PDF (handle multiple pages if needed)
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= 297; // A4 height in mm
+      if (imgHeight <= pdfHeight + 5) {
+        // Single page - fit exactly
+        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, Math.min(imgHeight, pdfHeight));
+      } else {
+        // Multiple pages needed
+        let heightLeft = imgHeight;
+        let position = 0;
 
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
         pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= 297;
+        heightLeft -= pdfHeight;
+
+        while (heightLeft > 5) { // 5mm tolerance to avoid blank pages
+          position = heightLeft - imgHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+          heightLeft -= pdfHeight;
+        }
       }
 
       // Get PDF as blob and open in new window for printing
@@ -121,13 +145,28 @@ export const ReportModal: React.FC<ReportModalProps> = ({ visit, signatory, onCl
         header.remove();
       }
 
-      // Create a temporary container
+      // Create a temporary container with exact A4 dimensions
       const tempContainer = document.createElement('div');
       tempContainer.style.position = 'absolute';
       tempContainer.style.left = '-9999px';
       tempContainer.style.width = '210mm';
+      tempContainer.style.height = '297mm';
+      tempContainer.style.display = 'flex';
+      tempContainer.style.flexDirection = 'column';
       tempContainer.appendChild(clonedElement);
       document.body.appendChild(tempContainer);
+
+      // Force the cloned element to fill the container
+      clonedElement.style.width = '210mm';
+      clonedElement.style.height = '297mm';
+      clonedElement.style.display = 'flex';
+      clonedElement.style.flexDirection = 'column';
+
+      // Find and style the footer to stick to bottom
+      const footer = clonedElement.querySelector('.report-footer') as HTMLElement;
+      if (footer) {
+        footer.style.marginTop = 'auto';
+      }
 
       // Create canvas from the cloned element (with footer and QR code)
       const canvas = await html2canvas(clonedElement, {
@@ -152,18 +191,27 @@ export const ReportModal: React.FC<ReportModalProps> = ({ visit, signatory, onCl
       const imgWidth = 210; // A4 width in mm
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-      let heightLeft = imgHeight;
-      let position = 0;
+      // Since we forced the container to be exactly 297mm, the image should fit on one page
+      // Add image to PDF - fit to single page
+      const pdfHeight = 297; // A4 height in mm
 
-      // Add image to PDF (handle multiple pages if needed)
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= 297; // A4 height in mm
+      if (imgHeight <= pdfHeight + 5) {
+        // Single page - fit exactly
+        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, Math.min(imgHeight, pdfHeight));
+      } else {
+        // Multiple pages needed
+        let heightLeft = imgHeight;
+        let position = 0;
 
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
         pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= 297;
+        heightLeft -= pdfHeight;
+
+        while (heightLeft > 5) { // 5mm tolerance to avoid blank pages
+          position = heightLeft - imgHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+          heightLeft -= pdfHeight;
+        }
       }
 
       // Save PDF
